@@ -25,7 +25,7 @@ using namespace std;
 
 int recv_message(int *fd, char *message, int *len){
 	int total = 0;
-	int bytesleft = MAXDATASIZE;
+	int bytesleft = *len;
 	int n;
 	while(bytesleft > 0){
 		n = recv(*fd, message+total, bytesleft, 0);
@@ -39,7 +39,7 @@ int recv_message(int *fd, char *message, int *len){
 }
 
 
-int send_maeesage(int *fd, char *message, int *len){
+int send_message(int *fd, char *message, int *len){
 	int total = 0; // 我們已經送出多少 bytes 的資料
 	int bytesleft = *len; // 我們還有多少資料要送
 	int n;
@@ -57,14 +57,14 @@ int send_maeesage(int *fd, char *message, int *len){
 
 }
 
-int recv_all(const int *fd, const FILE *out_file, const char instruction){
-	char buffer[MAXDATASIZE];
+int recv_all(const int *fd, const FILE *out_file, const int buf_size){			// 
+	char buffer[buf_size];
 	int len, stat;
 	buffer[0] = 1;
 	while(buffer[0] == 1){
-		len = 0;
+		len = buf_size;
 		memset(buffer, 0, sizeof buffer);
-		stat = recv_message(fd, buffer, &len)
+		stat = recv_message(fd, buffer, &len);
 		if(stat == -1){
 			perror("recv error");
 			fprintf(stderr, "error while %d, received data length:%d\n", (int)instruction, len);
@@ -85,12 +85,13 @@ void ls(int *fd, string *file_name){
 	message[0] = 1;					// ls command
 	message[1] = file_name.length();
 	strcpy(message+2, file_name.c_str(), file_name.length());
-	if(send_maeesage(fd, message, &len) == -1){
+	if(send_message(fd, message, &len) == -1){
 		perror("send message");
 		fprintf(stderr, "Command sent error : ls\nlenght sent : %d", len);
 		return;
 	}
-	recv_all(fd, stdout, 1);
+
+	recv_all(fd, stdout, MAXDATASIZE);
 	fflush(stdout);
 }
 

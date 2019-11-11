@@ -24,6 +24,8 @@ using namespace std;
 namespace fs = std::filesystem;
 //using namespace cv;
 
+char message_buffer[MAXDATASIZE];
+
 int recv_message(int *fd, char *message, int *len){
 	int total = 0;
 	int bytesleft = MAXDATASIZE;
@@ -40,7 +42,7 @@ int recv_message(int *fd, char *message, int *len){
 }
 
 
-int send_maeesage(int *fd, char *message, int *len){
+int send_message(int *fd, char *message, int *len){
 	int total = 0; // 我們已經送出多少 bytes 的資料
 	int bytesleft = *len; // 我們還有多少資料要送
 	int n;
@@ -59,17 +61,30 @@ int send_maeesage(int *fd, char *message, int *len){
 }
 
 void ls(int *fd){
-
-
+	const fs::path pathToShow(Server);
+	for (const auto& entry : fs::directory_iterator(pathToShow)) {
+		const auto filenameStr = entry.path().filename().string();
+		if (entry.is_regular_file()) {
+			memset(message_buffer, 0, sizeof message_buffer);
+			message_buffer[0] = 1;
+			message_buffer[1] = filenameStr.length();
+			strcpy(message_buffer+2, filenameStr.c_str(), filenameStr.length());
+			if(send_message(fd, message_buffer, MAXDATASIZE) != 0) return;
+		}
+	}
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 2;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	return;
 }
 
 
 void *get_in_addr(struct sockaddr *sa)
 {
-  if (sa->sa_family == AF_INET) {
-    return &(((struct sockaddr_in*)sa)->sin_addr);
-  }
-  return &(((struct sockaddr_in6*)sa)->sin6_addr);
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int main(int argc , char **argv){
@@ -87,7 +102,6 @@ int main(int argc , char **argv){
 
 	/// TCP connection section ///
 	int sockfd, new_fd, yes = 1;
-	char data_buffer[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // 連線者的位址資訊 
 	socklen_t sin_size;
@@ -152,19 +166,19 @@ int main(int argc , char **argv){
 			continue;
 		}
 		len = 0;
-		recv_message(new_fd, data_buffer, &len);
+		recv_message(new_fd, message_buffer, &len);
 
-		if(data_buffer[0] == 1){		// ls
+		if(message_buffer[0] == 1){		// ls
 			
-		}else if(data_buffer[0] == 2){	// put
+		}else if(message_buffer[0] == 2){	// put
 			// not yet
-		}else if(data_buffer[0] == 3){	// pull
+		}else if(message_buffer[0] == 3){	// pull
 			// not yet
-		}else if(data_buffer[0] == 4){	// play
+		}else if(message_buffer[0] == 4){	// play
 			// not yet
-		}else if(data_buffer[0] == -1){	// error message
+		}else if(message_buffer[0] == -1){	// error message
 			// not yet
-		}else if(data_buffer[0] == 0){	// probing, maybe don't need this
+		}else if(message_buffer[0] == 0){	// probing, maybe don't need this
 			// not yet
 		}else{							// error
 			perrer("INSTRUCTION error");
