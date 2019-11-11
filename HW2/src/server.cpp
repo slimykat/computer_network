@@ -10,17 +10,18 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
-
+#include <filesystem>
 //#include "opencv2/opencv.hpp"
 #define MAXDATASIZE 64 	// bytes
 // send protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, -1:end connection, 1:ls, 2:put, 3:pull, 4:play>
 // recv protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:error message, 1:sending data, 2:end of sending, 3:playing frame, 4:End of frame, 5:End of playing>
+	// INSTRUCTION:: <0:probe, -1:error message, 1:sending data, 2:end of sending, 3:playing, 4:End of playing>
 
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
-
+#define Server "server_file"
 using namespace std;
+namespace fs = std::filesystem;
 //using namespace cv;
 
 int recv_message(int *fd, char *message, int *len){
@@ -57,6 +58,12 @@ int send_maeesage(int *fd, char *message, int *len){
 
 }
 
+void ls(int *fd){
+
+
+}
+
+
 void *get_in_addr(struct sockaddr *sa)
 {
   if (sa->sa_family == AF_INET) {
@@ -69,6 +76,12 @@ int main(int argc , char **argv){
 	
 	if(argc != 2){
 		fprintf(stderr, "usage : ./server ip:port\n");
+		return 0;
+	}
+
+	/// file create
+	if(fs::create_directory(Server) == false){
+		fprintf(stderr, "fail to create server file\n");
 		return 0;
 	}
 
@@ -143,13 +156,13 @@ int main(int argc , char **argv){
 
 		if(data_buffer[0] == 1){		// ls
 			
-		}else if(data_buffer[0] == 2){
+		}else if(data_buffer[0] == 2){	// put
 			// not yet
-		}else if(data_buffer[0] == 3){
+		}else if(data_buffer[0] == 3){	// pull
 			// not yet
-		}else if(data_buffer[0] == 4){
+		}else if(data_buffer[0] == 4){	// play
 			// not yet
-		}else if(data_buffer[0] == -1){
+		}else if(data_buffer[0] == -1){	// error message
 			// not yet
 		}else if(data_buffer[0] == 0){	// probing, maybe don't need this
 			// not yet
