@@ -16,7 +16,7 @@
 #define MAXDATASIZE 1024 // bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, -1:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
-	// command >> 1:ls, 2:put, 3:get, 4:play
+	// command >> 1:ls, 2:put, 3:get, 4:play 5:close
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
@@ -351,6 +351,9 @@ int main(int argc , char **argv){
 		}
 		else if(instruction.compare("close") == 0){
 			run = false;
+			message_buffer[0] = 1;
+			message_buffer[3] = 5;
+			send_message(fd, message_buffer, MAXDATASIZE);
 		}else{
 			fprintf(stderr, "Command format error\n");
 			//cout << "75" << endl;

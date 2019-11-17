@@ -193,6 +193,7 @@ void command_handle(int *fd){
 		}else if(message_buffer[3] == 4){	// play
 
 		}else if(message_buffer[3] == 5){	// close
+			close(*fd);
 			return;
 		}else{								// unknown command
 			message_buffer[0] = -1;
@@ -297,6 +298,7 @@ int main(int argc , char **argv){
 		// pthread handler and command handler
 		cout << "new client incoming\n";
 		command_handle(&new_fd);
+		cout << "end connection\n";
 	}
 	return 0;	
 }
