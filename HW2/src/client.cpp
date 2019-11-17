@@ -120,14 +120,14 @@ int send_words(int *fd, istringstream *words){
 int send_file(int *fd, FILE *file){
 	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
-	unsigned short len = read(*file, message_buffer+3, MAXDATASIZE-3);
+	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	while(len  != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		len = read(file, message_buffer+3, MAXDATASIZE-3);
+		len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
