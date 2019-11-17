@@ -294,6 +294,7 @@ int main(int argc , char **argv){
 			continue;
 		}
 		// pthread handler and command handler
+		cout << "new client incoming\n";
 		command_handle(&new_fd);
 	}
 	return 0;	
