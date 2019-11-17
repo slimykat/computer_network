@@ -1,7 +1,6 @@
 CC = g++
 OPENCV =  `pkg-config --cflags --libs opencv`
 PTHREAD = -pthread
-STD = `-std=c++17`
 CLIENT = client.cpp
 SERVER = server.cpp
 CLI = client
@@ -10,9 +9,9 @@ SER = server
 all: server client
   
 server: $(SERVER)
-	$(CC) $(SERVER) -o $(SER) $(STD) $(OPENCV) $(PTHREAD) 
+	$(CC) $(SERVER) -std=c++11 -o $(SER) $(OPENCV) $(PTHREAD) 
 client: $(CLIENT)
-	$(CC) $(CLIENT) -o $(CLI) $(STD) $(OPENCV) $(PTHREAD)
+	$(CC) $(CLIENT) -std=c++11 -o $(CLI) $(OPENCV) $(PTHREAD)
 
 .PHONY: clean
 

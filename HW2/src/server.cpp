@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
-#include <filesystem>
+#include <experimental/filesystem>
 //#include "opencv2/opencv.hpp"
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
@@ -22,7 +22,7 @@
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "server_files"
 using namespace std;
-namespace fs = std::filesystem;
+namespace fs = std::experimental::filesystem;
 //using namespace cv;
 
 int recv_message(int *fd, char *message, int len){
@@ -59,7 +59,7 @@ int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to 
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			write(out_file, message_buffer+3, message_len);
+			fwrite(message_buffer+3, 1, message_len, out_file);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
@@ -74,7 +74,7 @@ int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to 
 	return 0;
 }
 int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to memory, ex:file names, frame size, etc.
-	words.clear();
+	words->clear();
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
 	while(stat == 0){
@@ -82,7 +82,7 @@ int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to 
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			write.append(message_buffer+3, message_len);
+			words->append(message_buffer+3, message_len);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
@@ -98,17 +98,17 @@ int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to 
 }
 
 int send_words(int *fd, stringstream *words, char message_buffer[MAXDATASIZE]){
-	memset(message_buffer, 0, sizeof message_buffer);
+	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	int len = 0;
-	words.read(message_buffer+3, MAXDATASIZE-3);
-	while((len = words.gcount()) != 0){
+	words->read(message_buffer+3, MAXDATASIZE-3);
+	while((len = words->gcount()) != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		words.read(message_buffer+3, MAXDATASIZE-3);
+		words->read(message_buffer+3, MAXDATASIZE-3);
 	}
 	// end sending
 	message_buffer[0] = 3;
@@ -117,16 +117,16 @@ int send_words(int *fd, stringstream *words, char message_buffer[MAXDATASIZE]){
 }
 
 int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
-	memset(message_buffer, 0, sizeof message_buffer);
+	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
-	unsigned short len = read(file, message_buffer+3, MAXDATASIZE-3);
+	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	while(len  != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		len = read(file, message_buffer+3, MAXDATASIZE-3);
+		len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
@@ -147,7 +147,7 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	send_words(fd, &container, message_buffer);
 	return;
 }
-
+/*
 void put(int *fd, char message_buffer[MAXDATASIZE]){
 	remove(message_buffer+2);			// prevent overlapping
 	FILE *out_file = fopen(message_buffer+2, "wb");
@@ -164,7 +164,7 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 void get(int  *fd){
 
 };
-
+*/
 void command_handle(int *fd){
 	char message_buffer[MAXDATASIZE];
 
@@ -188,13 +188,13 @@ void command_handle(int *fd){
 			return;
 		}else{								// unknown command
 			message_buffer[0] = -1;
-			send_message(&fd, message_buffer, MAXDATASIZE);
+			send_message(fd, message_buffer, MAXDATASIZE);
 		}
 	}
 	// error occur
 	message_buffer[0] = -1;
-	send_message(&fd, message_buffer, MAXDATASIZE);
-	close(fd);
+	send_message(fd, message_buffer, MAXDATASIZE);
+	close(*fd);
 }
 
 int main(int argc , char **argv){

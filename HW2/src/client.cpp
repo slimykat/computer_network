@@ -59,7 +59,7 @@ int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to termina
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			write(out_file, message_buffer+3, message_len);
+			fwrite(message_buffer+3, 1, message_len, out_file);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
@@ -74,7 +74,7 @@ int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to termina
 	return 0;
 }
 int recv_words(int *fd, string *words){							// to memory, ex:file names, frame size, etc.
-	words.clear();
+	words->clear();
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
 	while(stat == 0){
@@ -82,7 +82,7 @@ int recv_words(int *fd, string *words){							// to memory, ex:file names, frame
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			write.append(message_buffer+3, message_len);
+			words->append(message_buffer+3, message_len);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
@@ -101,14 +101,14 @@ int send_words(int *fd, istringstream *words){
 	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
 	int len = 0;
-	words.read(message_buffer+3, MAXDATASIZE-3);
-	while((len = words.gcount()) != 0){
+	words->read(message_buffer+3, MAXDATASIZE-3);
+	while((len = words->gcount()) != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		words.read(message_buffer+3, MAXDATASIZE-3);
+		words->read(message_buffer+3, MAXDATASIZE-3);
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
@@ -118,7 +118,7 @@ int send_words(int *fd, istringstream *words){
 int send_file(int *fd, FILE *file){
 	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
-	unsigned short len = read(file, message_buffer+3, MAXDATASIZE-3);
+	unsigned short len = read(*file, message_buffer+3, MAXDATASIZE-3);
 	while(len  != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
@@ -155,7 +155,7 @@ void ls(int *fd){
 	recv_file(fd, stdout);
 	fflush(stdout);
 }
-
+/*
 void put(const int const *fd){
 	FILE *in_file = fopen(message_buffer+2, "rb");
 	memset(message_buffer, 0, sizeof message_buffer);
@@ -196,7 +196,7 @@ void get(const int const *fd){
 	recv_all(fd, out_file, MAXDATASIZE);
 	close(out_file);
 }
-
+*/
 int main(int argc , char **argv){
 	
 	if(argc != 2){
