@@ -145,7 +145,7 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	while((dptr = readdir(dp)) != NULL){
 		string filenameStr(dptr->d_name);
 		if(filenameStr.compare(".") == 0){ continue; }
-        if(filenameStr.compare("..") == 0){ continue;}
+		if(filenameStr.compare("..") == 0){ continue;}
 		container << filenameStr;
 		container << "\n";
 	}
@@ -212,10 +212,22 @@ int main(int argc , char **argv){
 	}
 
 	/// folder create
-
-	if(mkdir(Server, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1){
-		fprintf(stderr, "fail to create server file\n");
-		return 0;
+	struct stat s;
+	int err = stat(Server, &s);
+	if(-1 == err) {
+		if(ENOENT == errno) {
+			mkdir(Server, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		} else {
+			perror("stat");
+			exit(1);
+		}
+	} else {
+		if(S_ISDIR(s.st_mode)) {
+			cerr << "server file already exist\n";
+		} else {
+			cerr << "fail to create server file, eist same file with same name\n";
+			exit(1);
+		}
 	}
 
 	/// TCP connection section ///
@@ -284,7 +296,7 @@ int main(int argc , char **argv){
 		// pthread handler and command handler
 		command_handle(&new_fd);
 	}
-	return 0;    
+	return 0;	
 }
 
 

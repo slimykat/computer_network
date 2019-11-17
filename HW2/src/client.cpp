@@ -20,7 +20,7 @@
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
-#define Client "client_files"
+#define Client "./client_files"
 //#define DEBUG1
 
 using namespace std;
@@ -221,9 +221,22 @@ int main(int argc , char **argv){
 		return 0;
 	}
 	/// folder create
-	if(mkdir(Client, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1){
-		fprintf(stderr, "fail to create client file\n");
-		return 0;
+	struct stat s;
+	int err = stat(Client, &s);
+	if(-1 == err) {
+		if(ENOENT == errno) {
+			mkdir(Client, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		} else {
+			perror("stat");
+			exit(1);
+		}
+	} else {
+		if(S_ISDIR(s.st_mode)) {
+			cerr << "client file already exist\n";
+		} else {
+			cerr << "fail to create client file, eist same file with same name\n";
+			exit(1);
+		}
 	}
 
 	/// TCP connection section ///
