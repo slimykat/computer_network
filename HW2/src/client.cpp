@@ -21,7 +21,7 @@
 	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
 #define Client "./client_files"
-//#define DEBUG1
+#define DEBUG1
 
 using namespace std;
 //using namespace cv;
@@ -301,13 +301,14 @@ int main(int argc , char **argv){
 	}
 
 	freeaddrinfo(servinfo);
-
+	cout << "connection success\n";
 	//////////////////////////////
 
 
 	/// Instruction ///
 	bool run = true;
     while(run) {
+    	cout << "please type in a command\n";
     	string buffer;
     	string file;
     	string instruction;
