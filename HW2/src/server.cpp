@@ -176,6 +176,7 @@ void command_handle(int *fd){
 	char message_buffer[MAXDATASIZE];
 
 	while(1){
+		cout << "receiving command\n";
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
 		if(message_buffer[0] != 1){
 			break;
