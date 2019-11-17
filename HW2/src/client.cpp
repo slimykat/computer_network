@@ -11,90 +11,191 @@
 #include <netdb.h>
 //#include "opencv2/opencv.hpp"
 
-#define MAXDATASIZE 64 // bytes
-// send protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:end connection, 1:ls, 2:put, 3:pull, 4:play>
-// recv protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:error message, 1:sending data, 2:end of sending, 3:playing frame, 4:End of frame, 5:End of playing>
+#define MAXDATASIZE 1024 // bytes
+// send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
+	// INSTRUCTION:: <0:probe, -1:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
+	// command >> 1:ls, 2:put, 3:get, 4:play
+// recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
+	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
+#define Client "client_files"
 //#define DEBUG1
-
 
 using namespace std;
 //using namespace cv;
 
-int recv_message(int *fd, char *message, int *len){
+char message_buffer[MAXDATASIZE];
+int recv_message(int *fd, char *message, int len){
 	int total = 0;
-	int bytesleft = *len;
+	int bytesleft = len;
 	int n;
 	while(bytesleft > 0){
 		n = recv(*fd, message+total, bytesleft, 0);
-		if(n == -1) { break; }
+		if(n == -1 || n == 0) { return -1; }
 		total += n;
 		bytesleft -= n;
-	}
-	*len = total;
-
-	return ((n==-1)?-1:0);
-}
-
-
-int send_message(int *fd, char *message, int *len){
-	int total = 0; // 我們已經送出多少 bytes 的資料
-	int bytesleft = *len; // 我們還有多少資料要送
-	int n;
-
-	while(total < *len) {
-		n = send(*fd, message+total, bytesleft, 0);
-		if (n == -1) { break; }
-		total += n;
-		bytesleft -= n;
-	}
-
-	*len = total; // 傳回實際上送出的資料量
-
-	return ((n==-1)?-1:0); // 失敗時傳回 -1、成功時傳回 0
-
-}
-
-int recv_all(const int *fd, const FILE *out_file, const int buf_size){			// 
-	char buffer[buf_size];
-	int len, stat;
-	buffer[0] = 1;
-	while(buffer[0] == 1){
-		len = buf_size;
-		memset(buffer, 0, sizeof buffer);
-		stat = recv_message(fd, buffer, &len);
-		if(stat == -1){
-			perror("recv error");
-			fprintf(stderr, "error while %d, received data length:%d\n", (int)instruction, len);
-			return -1
-		}
-		if(buffer[0] == -1) { 
-			frpintf(stderr, "The ‘%s’ doesn’t exist.\n", buffer+2);
-			return 0;
-		}
-		write(out_file, buffer+2, buffer[1]);
 	}
 	return 0;
 }
 
-void ls(int *fd, string *file_name){
-	char message[MAXDATASIZE] = {0};
-	int len = MAXDATASIZE;
-	message[0] = 1;					// ls command
-	message[1] = file_name.length();
-	strcpy(message+2, file_name.c_str(), file_name.length());
-	if(send_message(fd, message, &len) == -1){
-		perror("send message");
-		fprintf(stderr, "Command sent error : ls\nlenght sent : %d", len);
+int send_message( int*  fd, char *message, int len){
+	int total = 0; 				// 我們已經送出多少 bytes 的資料
+	int bytesleft = len; 		// 我們還有多少資料要送
+	int n;
+	while(total < len) {
+		n = send(*fd, message+total, bytesleft, 0);
+		if (n == -1 || n == 0) { return -1; }
+		total += n;
+		bytesleft -= n;
+	}
+	return 0;
+}
+
+int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to terminal, puts and gets
+	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
+	unsigned short message_len, temp;
+	while(stat == 0){
+		if(message_buffer[0] == 2){				// receiving
+			message_len = message_buffer[1];
+			temp = message_buffer[2];
+			message_len = (message_len | (temp << 8));
+			write(out_file, message_buffer+3, message_len);
+		}else if(message_buffer[0] == 3){		// end
+			return 0;
+		}else{									// error?
+			return -2;
+		}
+		stat = recv_message(fd, message_buffer, MAXDATASIZE);
+		if(stat == -1){
+			perror("recv error");
+			return -1;
+		}
+	}
+	return 0;
+}
+int recv_words(int *fd, string *words){							// to memory, ex:file names, frame size, etc.
+	words.clear();
+	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
+	unsigned short message_len, temp;
+	while(stat == 0){
+		if(message_buffer[0] == 2){				// receiving
+			message_len = message_buffer[1];
+			temp = message_buffer[2];
+			message_len = (message_len | (temp << 8));
+			write.append(message_buffer+3, message_len);
+		}else if(message_buffer[0] == 3){		// end
+			return 0;
+		}else{									// error?
+			return -2;
+		}
+		stat = recv_message(fd, message_buffer, MAXDATASIZE);
+		if(stat == -1){
+			perror("recv error");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+int send_words(int *fd, istringstream *words){
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 2;
+	int len = 0;
+	words.read(message_buffer+3, MAXDATASIZE-3);
+	while((len = words.gcount()) != 0){
+		message_buffer[1] = (len & 511);
+		message_buffer[2] = (len >> 8);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return -1;
+		}
+		words.read(message_buffer+3, MAXDATASIZE-3);
+	}
+	message_buffer[0] = 3;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	return 0;
+}
+
+int send_file(int *fd, FILE *file){
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 2;
+	unsigned short len = read(file, message_buffer+3, MAXDATASIZE-3);
+	while(len  != 0){
+		message_buffer[1] = (len & 511);
+		message_buffer[2] = (len >> 8);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return -1;
+		}
+		len = read(file, message_buffer+3, MAXDATASIZE-3);
+	}
+	message_buffer[0] = 3;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	return 0;
+}
+
+void ls(int *fd){
+	memset(message_buffer, 0, sizeof message_buffer);
+
+	message_buffer[0] = 1;					// send ls command
+	message[1] = 1;
+	message_buffer[3] = 1;
+	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+		perror("send_message");
 		return;
 	}
 
-	recv_all(fd, stdout, MAXDATASIZE);
+	// receive answer from server
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		return;
+	}
+	if(message_buffer[0] == -1){			// reject
+		return;
+	}
+
+	// write to stdout
+	recv_file(fd, stdout);
 	fflush(stdout);
 }
 
+void put(const int const *fd){
+	FILE *in_file = fopen(message_buffer+2, "rb");
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 2;
+	int bytes;
+	int sent_bytes;
+	while((bytes = read_to_buffer(in_file, message_buffer + 2, MAXDATASIZE - 2)) != 0){
+		
+		sent_bytes = MAXDATASIZE;
+		if(bytes <= 0){
+			if(bytes == -1){
+				perror("read");
+				fprintf(stderr, "put error\n");
+			}
+			break;
+		}else{
+			message_buffer[0] = 5;
+			message_buffer[1] = bytes;
+		}
+		send_message(fd, message, &sent_bytes);
+		memset(message_buffer, 0, sizeof message_buffer);
+	}
+	sent_bytes = MAXDATASIZE;
+	message_buffer[0] = -1;
+	send_message(fd, message_buffer, &sent_bytes);
+	return;
+}
+
+void get(const int const *fd){
+	remove(message_buffer+2);			// prevent overlapping
+	FILE *out_file = fopen(message_buffer+2, "wb");
+
+	/// send message to start sending file
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 1;
+	send_message(fd, message_buffer, MAXDATASIZE);
+
+	recv_all(fd, out_file, MAXDATASIZE);
+	close(out_file);
+}
 
 int main(int argc , char **argv){
 	
@@ -116,6 +217,11 @@ int main(int argc , char **argv){
 
 	if(PORT.length() == 0 || IP.length() == 0){
 		fprintf(stderr, "usage : ./client ip:port\n");
+		return 0;
+	}
+	/// folder create
+	if(fs::create_directory(Client) == false){
+		fprintf(stderr, "fail to create client file\n");
 		return 0;
 	}
 
@@ -202,9 +308,12 @@ int main(int argc , char **argv){
     	if(instruction.compare("ls") == 0){						// ls
 			if(file.length() != 0){
 				fprintf(stderr, "Command format error\n");
-				
         		continue;
         	}
+        	message_buffer[0] = 1;
+        	message_buffer[1] = 1;
+        	message_buffer[2] = 0;
+        	message_buffer[3] = 1;
         	//cout << instruction << " 51 " << endl;
 		}else if(instruction.compare("put") == 0){				// put
 			if(file.length() == 0){

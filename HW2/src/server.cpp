@@ -12,79 +12,189 @@
 #include <signal.h>
 #include <filesystem>
 //#include "opencv2/opencv.hpp"
-#define MAXDATASIZE 64 	// bytes
-// send protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:end connection, 1:ls, 2:put, 3:pull, 4:play>
-// recv protocal: 63~3:DATA 1:DATA_LENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:error message, 1:sending data, 2:end of sending, 3:playing, 4:End of playing>
+#define MAXDATASIZE 1024 	// bytes
+// send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
+	// INSTRUCTION:: <0:probe, -1:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
+	// command >> 1:ls, 2:put, 3:get, 4:play, 5:close connection
+// recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
+	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
-#define Server "server_file"
+#define Server "server_files"
 using namespace std;
 namespace fs = std::filesystem;
 //using namespace cv;
 
-char message_buffer[MAXDATASIZE];
-
-int recv_message(int *fd, char *message, int *len){
+int recv_message(int *fd, char *message, int len){
 	int total = 0;
-	int bytesleft = MAXDATASIZE;
+	int bytesleft = len;
 	int n;
 	while(bytesleft > 0){
 		n = recv(*fd, message+total, bytesleft, 0);
-		if(n == -1) { break; }
+		if(n == -1 || n == 0) { return -1; }
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total;
-
-	return ((n==-1)?-1:0);
+	return 0;
 }
 
-
-int send_message(int *fd, char *message, int *len){
-	int total = 0; // 我們已經送出多少 bytes 的資料
-	int bytesleft = *len; // 我們還有多少資料要送
+int send_message(int *fd, char *message, int len){
+	int total = 0; 			// 我們已經送出多少 bytes 的資料
+	int bytesleft = len; 	// 我們還有多少資料要送
 	int n;
-
-	while(total < *len) {
+	while(total < len) {
 		n = send(*fd, message+total, bytesleft, 0);
-		if (n == -1) { break; }
+		if (n == -1 || n == 0) { return -1; }
 		total += n;
 		bytesleft -= n;
 	}
-
-	*len = total; // 傳回實際上送出的資料量
-
-	return ((n==-1)?-1:0); // 失敗時傳回 -1、成功時傳回 0
-
+	return 0;
 }
 
-void ls(int *fd){
-	const fs::path pathToShow(Server);
-	for (const auto& entry : fs::directory_iterator(pathToShow)) {
-		const auto filenameStr = entry.path().filename().string();
-		if (entry.is_regular_file()) {
-			memset(message_buffer, 0, sizeof message_buffer);
-			message_buffer[0] = 1;
-			message_buffer[1] = filenameStr.length();
-			strcpy(message_buffer+2, filenameStr.c_str(), filenameStr.length());
-			if(send_message(fd, message_buffer, MAXDATASIZE) != 0) return;
+int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to file, ex:ls write to terminal, puts and gets
+	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
+	unsigned short message_len, temp;
+	while(stat == 0){
+		if(message_buffer[0] == 2){				// receiving
+			message_len = message_buffer[1];
+			temp = message_buffer[2];
+			message_len = (message_len | (temp << 8));
+			write(out_file, message_buffer+3, message_len);
+		}else if(message_buffer[0] == 3){		// end
+			return 0;
+		}else{									// error?
+			return -2;
+		}
+		stat = recv_message(fd, message_buffer, MAXDATASIZE);
+		if(stat == -1){
+			perror("recv error");
+			return -1;
 		}
 	}
+	return 0;
+}
+int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to memory, ex:file names, frame size, etc.
+	words.clear();
+	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
+	unsigned short message_len, temp;
+	while(stat == 0){
+		if(message_buffer[0] == 2){				// receiving
+			message_len = message_buffer[1];
+			temp = message_buffer[2];
+			message_len = (message_len | (temp << 8));
+			write.append(message_buffer+3, message_len);
+		}else if(message_buffer[0] == 3){		// end
+			return 0;
+		}else{									// error?
+			return -2;
+		}
+		stat = recv_message(fd, message_buffer, MAXDATASIZE);
+		if(stat == -1){
+			perror("recv error");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+int send_words(int *fd, stringstream *words, char message_buffer[MAXDATASIZE]){
 	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
+	int len = 0;
+	words.read(message_buffer+3, MAXDATASIZE-3);
+	while((len = words.gcount()) != 0){
+		message_buffer[1] = (len & 511);
+		message_buffer[2] = (len >> 8);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return -1;
+		}
+		words.read(message_buffer+3, MAXDATASIZE-3);
+	}
+	// end sending
+	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
+	return 0;
+}
+
+int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 2;
+	unsigned short len = read(file, message_buffer+3, MAXDATASIZE-3);
+	while(len  != 0){
+		message_buffer[1] = (len & 511);
+		message_buffer[2] = (len >> 8);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return -1;
+		}
+		len = read(file, message_buffer+3, MAXDATASIZE-3);
+	}
+	message_buffer[0] = 3;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	return 0;
+}
+
+void ls(int *fd, char message_buffer[MAXDATASIZE]){
+	// prepare
+	fs::path pathToShow(Server);
+	stringstream container;
+	for (auto& entry : fs::directory_iterator(pathToShow)) {
+		auto filenameStr = entry.path().filename().string();
+		container << filenameStr;
+		container << "\n";
+	}
+
+	// send
+	send_words(fd, &container, message_buffer);
 	return;
 }
 
+void put(int *fd, char message_buffer[MAXDATASIZE]){
+	remove(message_buffer+2);			// prevent overlapping
+	FILE *out_file = fopen(message_buffer+2, "wb");
 
-void *get_in_addr(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
+	/// send message to start sending file
+	memset(message_buffer, 0, sizeof message_buffer);
+	message_buffer[0] = 1;
+	send_message(fd, message_buffer, MAXDATASIZE);
+
+	recv_file(fd, out_file, MAXDATASIZE);
+	close(out_file);
+}
+
+void get(int  *fd){
+
+};
+
+void command_handle(int *fd){
+	char message_buffer[MAXDATASIZE];
+
+	while(1){
+		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
+		if(message_buffer[0] != 1){
+			break;
+		}
+		if(message_buffer[3] == 1){		// ls
+			message_buffer[0] = 1;
+			message_buffer[3] = 1;
+			send_message(fd, message_buffer, MAXDATASIZE);
+			ls(fd, message_buffer);
+		}else if(message_buffer[3] == 2){	// put
+
+		}else if(message_buffer[3] == 3){	// get
+
+		}else if(message_buffer[3] == 4){	// play
+
+		}else if(message_buffer[3] == 5){	// close
+			return;
+		}else{								// unknown command
+			message_buffer[0] = -1;
+			send_message(&fd, message_buffer, MAXDATASIZE);
+		}
 	}
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+	// error occur
+	message_buffer[0] = -1;
+	send_message(&fd, message_buffer, MAXDATASIZE);
+	close(fd);
 }
 
 int main(int argc , char **argv){
@@ -94,7 +204,7 @@ int main(int argc , char **argv){
 		return 0;
 	}
 
-	/// file create
+	/// folder create
 	if(fs::create_directory(Server) == false){
 		fprintf(stderr, "fail to create server file\n");
 		return 0;
@@ -120,8 +230,7 @@ int main(int argc , char **argv){
 
 	// 以迴圈找出全部的結果，並綁定（bind）到第一個能用的結果
 	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-			p->ai_protocol)) == -1) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 			perror("server: socket");
 			continue;
 		}
@@ -145,19 +254,18 @@ int main(int argc , char **argv){
 		return 2;
 	}
 
-	freeaddrinfo(servinfo); // 全部都用這個 structure
+	freeaddrinfo(servinfo);
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
-		exit(1);
+		return 2;
 	}
 
 
 	printf("server: waiting for connections...\n");
 
 	//////////////////////////////
-	char s[INET6_ADDRSTRLEN];
-	int len;
+
 	while(1) { // 主要的 accept() 迴圈
 		sin_size = sizeof their_addr;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
@@ -165,34 +273,8 @@ int main(int argc , char **argv){
 			perror("accept");
 			continue;
 		}
-		len = 0;
-		recv_message(new_fd, message_buffer, &len);
-
-		if(message_buffer[0] == 1){		// ls
-			
-		}else if(message_buffer[0] == 2){	// put
-			// not yet
-		}else if(message_buffer[0] == 3){	// pull
-			// not yet
-		}else if(message_buffer[0] == 4){	// play
-			// not yet
-		}else if(message_buffer[0] == -1){	// error message
-			// not yet
-		}else if(message_buffer[0] == 0){	// probing, maybe don't need this
-			// not yet
-		}else{							// error
-			perrer("INSTRUCTION error");
-			return 0
-		}
-
-/*
-		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
-		printf("server: got connection from %s\n", s);
-
-		if (send(new_fd, "Hello, world!", 13, 0) == -1) perror("send");
-
-		close(new_fd);
-*/		
+		// pthread handler and command handler
+		command_handle(&new_fd);
 	}
 	return 0;    
 }
