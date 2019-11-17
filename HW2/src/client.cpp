@@ -136,7 +136,7 @@ void ls(int *fd){
 	memset(message_buffer, 0, sizeof message_buffer);
 
 	message_buffer[0] = 1;					// send ls command
-	message[1] = 1;
+	message_buffer[1] = 1;
 	message_buffer[3] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
@@ -147,13 +147,12 @@ void ls(int *fd){
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		return;
 	}
-	if(message_buffer[0] == -1){			// reject
-		return;
+	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
+		// write to stdout
+		recv_file(fd, stdout);
+		fflush(stdout);
 	}
-
-	// write to stdout
-	recv_file(fd, stdout);
-	fflush(stdout);
+	return;
 }
 /*
 void put(const int const *fd){
@@ -310,11 +309,7 @@ int main(int argc , char **argv){
 				fprintf(stderr, "Command format error\n");
         		continue;
         	}
-        	message_buffer[0] = 1;
-        	message_buffer[1] = 1;
-        	message_buffer[2] = 0;
-        	message_buffer[3] = 1;
-        	//cout << instruction << " 51 " << endl;
+        	ls(&sockfd);
 		}else if(instruction.compare("put") == 0){				// put
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");

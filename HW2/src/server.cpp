@@ -7,10 +7,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
-#include <experimental/filesystem>
+#include <dirent.h>
 //#include "opencv2/opencv.hpp"
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
@@ -20,9 +21,9 @@
 	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
-#define Server "server_files"
+#define Server "./server_files"
 using namespace std;
-namespace fs = std::experimental::filesystem;
+
 //using namespace cv;
 
 int recv_message(int *fd, char *message, int len){
@@ -135,10 +136,16 @@ int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
 
 void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	// prepare
-	fs::path pathToShow(Server);
+	
+	DIR *dp = NULL;
+	struct dirent *dptr = NULL;
+	dp = opendir(Server);
 	stringstream container;
-	for (auto& entry : fs::directory_iterator(pathToShow)) {
-		auto filenameStr = entry.path().filename().string();
+	
+	while((dptr = readdir(dp)) != NULL){
+		string filenameStr(dptr->d_name);
+		if(filenameStr.compare(".") == 0){ continue; }
+        if(filenameStr.compare("..") == 0){ continue;}
 		container << filenameStr;
 		container << "\n";
 	}
@@ -153,7 +160,7 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 	FILE *out_file = fopen(message_buffer+2, "wb");
 
 	/// send message to start sending file
-	memset(message_buffer, 0, sizeof message_buffer);
+	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 1;
 	send_message(fd, message_buffer, MAXDATASIZE);
 
@@ -205,7 +212,8 @@ int main(int argc , char **argv){
 	}
 
 	/// folder create
-	if(fs::create_directory(Server) == false){
+
+	if(mkdir(Server, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1){
 		fprintf(stderr, "fail to create server file\n");
 		return 0;
 	}
