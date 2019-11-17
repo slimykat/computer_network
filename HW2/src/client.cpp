@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <dirent.h>
 //#include "opencv2/opencv.hpp"
 
 #define MAXDATASIZE 1024 // bytes
@@ -219,7 +220,7 @@ int main(int argc , char **argv){
 		return 0;
 	}
 	/// folder create
-	if(fs::create_directory(Client) == false){
+	if(mkdir(Client, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1){
 		fprintf(stderr, "fail to create client file\n");
 		return 0;
 	}
