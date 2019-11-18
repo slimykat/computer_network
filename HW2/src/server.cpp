@@ -25,8 +25,7 @@
 #define Server "./server_files"
 //#define DEBUG2
 using namespace std;
-
-//using namespace cv;
+using namespace cv;
 
 int recv_message(int *fd, unsigned char *message, int len){
 	int total = 0;

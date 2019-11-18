@@ -25,7 +25,7 @@
 #define DEBUG1
 //#define DEBUG2
 using namespace std;
-//using namespace cv;
+using namespace cv;
 
 unsigned char message_buffer[MAXDATASIZE];
 int recv_message(int *fd, unsigned char *message, int len){
