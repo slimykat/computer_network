@@ -226,7 +226,7 @@ void get(int *fd, string *file_name){
 	return;
 }
 
-int recv_frame(int *fd, unsigned char *frame_buffer){
+int recv_frame(int *fd, uchar *frame_buffer){
 	
 	int bytes_read = 0;
 	unsigned short len, temp;
@@ -238,7 +238,7 @@ int recv_frame(int *fd, unsigned char *frame_buffer){
 		temp = message_buffer[2];
 		len = (len | (temp << 8));
 
-		memcpy(message_buffer + 3, frame_buffer + bytes_read, len);
+		memcpy(frame_buffer + bytes_read, message_buffer + 3, len);
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
@@ -293,6 +293,13 @@ void play(int *fd, string *file_name){
 	}
 	int height = atoi(resol.c_str());
 	cout << "width = " << width << "\nheight = " << height << endl;
+
+	if(recv_words(fd, &resol) != 0){
+		perror("request recv");
+		return;
+	}
+	unsigned int frame_count = atoi(resol.c_str());
+
 	message_buffer[0] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("play send");
@@ -308,27 +315,15 @@ void play(int *fd, string *file_name){
 		 imgClient = imgClient.clone();
 	}
 
-	while(1){
-		// if video ended, exit
-		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-			perror("play recv");
-			return;
-		}
-		if(message_buffer[0] == 0){	// ended
-			cout << "video ended\n";
-			for (int i = 0 ; i < MAXDATASIZE ; i ++){
-				cout << (int)message_buffer[i];
-			}
-			cout <<endl;
-			break;
-		}
+	for(unsigned int t = 0 ; t < frame_count ; ++t){
+		
 		// copy a frame to the buffer
 		recv_frame(fd, imgClient.data);
 		imshow("Video", imgClient);
 		// Press ESC on keyboard to exit
 		// notice: this part is necessary due to openCV's design.
 		// waitKey means a delay to get the next frame.
-		char c = (char)waitKey(33);
+		char c = (char)waitKey(33.3333);
 		if(c==27){
 			cout << "closing video\n";
 			message_buffer[0] = 3;

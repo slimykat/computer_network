@@ -193,7 +193,7 @@ void get(int  *fd, unsigned char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-int send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buffer[MAXDATASIZE], int bytes){
+int send_frame(int*fd, uchar *frame_buffer, unsigned char message_buffer[MAXDATASIZE], int bytes){
 	message_buffer[0] = 4;
 	unsigned short len = MAXDATASIZE - 3;
 	message_buffer[1] = (len & 511);
@@ -208,13 +208,11 @@ int send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buffe
 		bytes -= (MAXDATASIZE - 3);
 	}
 	len = bytes;
-	if(len > 0){
-		message_buffer[1] = (len & 511);
-		message_buffer[2] = (len >> 8);
-		memcpy(message_buffer + 3, frame_buffer+bytes_read, len);
-		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
-			return -1;
-		}	
+	message_buffer[1] = (len & 511);
+	message_buffer[2] = (len >> 8);
+	memcpy(message_buffer + 3, frame_buffer + bytes_read, len);
+	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+		return -1;	
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
@@ -257,6 +255,14 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		cerr << ("height send");
 		return;
 	}
+	unsigned int frame_count = cap.get(CV_CAP_PROP_FRAME_COUNT);
+	out_container.clear();
+	out_container << frame_count;
+	out_container << '\0';
+	if(send_words(fd, &out_container, message_buffer) != 0){
+		cerr << ("height send");
+		return;
+	}
 	// check if resolution is fine
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("play recv");
@@ -279,7 +285,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	message_buffer[0] = 4;
 	send_message(fd, message_buffer, MAXDATASIZE);
 
-	while(1){
+	for(unsigned int t = 0 ; t < frame_count ; ++t){
 		if(send_frame(fd, imgServer.data, message_buffer, imgSize) != 0){
 			perror("play frame");
 			return;
@@ -292,23 +298,9 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		if(message_buffer[0] == 3){	// ended
 			break;
 		}
-		if(imgServer.empty()){
-			message_buffer[0] = 0;
-			send_message(fd, message_buffer, MAXDATASIZE); // reach to the end of the video file
-			break;
-		}else{
-			message_buffer[0] = 4;
-			if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
-				perror("play send");
-				return;
-			}
-		}
-		imshow("Server", imgServer);
-		waitKey(33);
 		cap >> imgServer;
 	}
 	cap.release();
-	destroyAllWindows();
 	return;
 }
 
