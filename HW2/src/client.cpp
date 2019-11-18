@@ -145,7 +145,10 @@ void ls(int *fd){
 
 	// receive answer from server
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-		return;
+		if(!(message_buffer[0] == 1 && message_buffer[3] == 1)){
+			perror("ls rejected");
+			return;
+		}
 	}
 	cout << "===================" << endl;
 	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
