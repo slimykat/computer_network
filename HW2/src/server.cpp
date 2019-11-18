@@ -86,7 +86,7 @@ int recv_words(int *fd, string *words, unsigned char message_buffer[MAXDATASIZE]
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			words->append(message_buffer+3, message_len);
+			words->append(((unsigned char*)message_buffer)+3, message_len);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
