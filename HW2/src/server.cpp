@@ -220,7 +220,7 @@ void send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buff
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
-	return 0;
+	return;
 }
 
 void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
@@ -253,6 +253,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		return;
 	}
 	// get the size of a frame in bytes 
+	Mat imgServer;
 	imgServer = Mat::zeros(width, height, CV_8UC3);
 	cap >> imgServer;
 	int imgSize = imgServer.total() * imgServer.elemSize();
