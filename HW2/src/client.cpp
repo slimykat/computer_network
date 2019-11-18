@@ -99,7 +99,7 @@ int recv_words(int *fd, string *words){							// to memory, ex:file names, frame
 	return 0;
 }
 
-int send_words(int *fd, istringstream *words){
+int send_words(int *fd, stringstream *words){
 	message_buffer[0] = 2;
 	int len = 0;
 	words->read(message_buffer+3, MAXDATASIZE-3);
