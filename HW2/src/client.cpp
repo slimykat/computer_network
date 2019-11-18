@@ -290,11 +290,14 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	int height = atoi((char*)message_buffer+3);
-	
+
 	message_buffer[0] = 1;
-	send_message(fd, message_buffer, MAXDATASIZE);
-
-
+	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("play send");
+		return;
+	}
+	cout << "get resolutions, preparing video frame\n";
+	
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
 
@@ -310,6 +313,7 @@ void play(int *fd, string *file_name){
 			return;
 		}
 		if(message_buffer[0] == 3){	// ended
+			cout << "ended";
 			break;
 		}
 		// copy a frame to the buffer
@@ -320,6 +324,7 @@ void play(int *fd, string *file_name){
 		// waitKey means a delay to get the next frame.
 		c = (char)waitKey(33.3333);
 		if(c==27){
+			cout << "closing video\n";
 			message_buffer[0] = 3;
 			send_message(fd, message_buffer, MAXDATASIZE);
 			break;
