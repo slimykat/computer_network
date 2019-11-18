@@ -270,6 +270,9 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 
 	// get the size of a frame in bytes 
 	Mat imgServer;
+	if(!imgServer.isContinuous()){
+        imgServer = imgServer.clone();
+    }
 	imgServer = Mat::zeros(height, width, CV_8UC3);
 	cap >> imgServer;
 	int imgSize = imgServer.total() * imgServer.elemSize();
@@ -300,8 +303,11 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 				return;
 			}
 		}
+		imshow("Server", imgServer);
 		cap >> imgServer;
 	}
+	cap.release();
+	destroyAllWindows();
 	return;
 }
 
