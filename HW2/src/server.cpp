@@ -143,10 +143,8 @@ void ls(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	struct dirent *dptr = NULL;
 	dp = opendir(".");
 	stringstream container;
-	cout << "ls command\n";
 	while((dptr = readdir(dp)) != NULL){
 		string filenameStr(dptr->d_name);
-		cout << filenameStr << endl;
 		container << filenameStr;
 		container << "\n";
 	}
@@ -271,7 +269,10 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	message_buffer[0] = 4;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	while(1){
-		send_frame(fd, imgServer.data, message_buffer, imgSize);
+		if(send_frame(fd, imgServer.data, message_buffer, imgSize) != 0){
+			perror("play frame");
+			return;
+		}
 		// check if client still need frames
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 			perror("play recv");
@@ -280,14 +281,16 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		if(message_buffer[0] == 3){	// ended
 			break;
 		}
-
 		if(imgServer.empty()){
 			message_buffer[0] = 3;
 			send_message(fd, message_buffer, MAXDATASIZE); // reach to the end of the video file
 			break;
 		}else{
 			message_buffer[0] = 4;
-			send_message(fd, message_buffer, MAXDATASIZE);
+			if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
+				perror("play send");
+				return;
+			}
 		}
 		cap >> imgServer;
 	}
@@ -298,11 +301,12 @@ void command_handle(int *fd){
 	unsigned char message_buffer[MAXDATASIZE];
 
 	while(1){
-		cout << "receiving command\n";
+		cout << "waiting for command\n";
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
 		if(message_buffer[0] != 1){
 			break;
 		}
+		cout << "command : " << message_buffer[3] << endl;
 		if(message_buffer[3] == 1){		// ls
 			answer_YesNo(fd, message_buffer, true);
 			ls(fd, message_buffer);

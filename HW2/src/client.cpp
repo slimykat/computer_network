@@ -297,7 +297,7 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	cout << "get resolutions, preparing video frame\n";
-	
+
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
 
@@ -313,7 +313,7 @@ void play(int *fd, string *file_name){
 			return;
 		}
 		if(message_buffer[0] == 3){	// ended
-			cout << "ended";
+			cout << "video ended\n";
 			break;
 		}
 		// copy a frame to the buffer
