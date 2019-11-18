@@ -141,11 +141,10 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	struct dirent *dptr = NULL;
 	dp = opendir(".");
 	stringstream container;
-	
+	cout << "ls command\n";
 	while((dptr = readdir(dp)) != NULL){
 		string filenameStr(dptr->d_name);
-		//if(filenameStr.compare(".") == 0){ continue; }
-		//if(filenameStr.compare("..") == 0){ continue;}
+		cout << filenameStr << endl;
 		container << filenameStr;
 		container << "\n";
 	}
