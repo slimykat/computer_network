@@ -105,7 +105,7 @@ int send_words(int *fd, stringstream *words, unsigned char message_buffer[MAXDAT
 	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	int len = 0;
-	words->read(message_buffer+3, MAXDATASIZE-3);
+	words->read((char *)message_buffer+3, MAXDATASIZE-3);
 	while((len = words->gcount()) != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
