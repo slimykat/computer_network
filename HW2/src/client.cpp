@@ -236,7 +236,7 @@ void recv_frame(int *fd, unsigned char *frame_buffer){
 	while(message_buffer[0] == 4){
 		len = message_buffer[1];
 		temp = message_buffer[2];
-		len = (message_len | (temp << 8));
+		len = (len | (temp << 8));
 
 		memcpy(message_buffer + 3, frame_buffer + bytes_read, len);
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
@@ -323,7 +323,7 @@ void play(int *fd, string *file_name){
 			break;
 		}
 		// copy a frame to the buffer
-		recv_frame(fd, imgClient.data, imgSize);
+		recv_frame(fd, imgClient.data);
 		imshow("Video", imgClient);
 		// Press ESC on keyboard to exit
 		// notice: this part is necessary due to openCV's design.
