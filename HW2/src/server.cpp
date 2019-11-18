@@ -257,11 +257,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	imgServer = Mat::zeros(width, height, CV_8UC3);
 	cap >> imgServer;
 	int imgSize = imgServer.total() * imgServer.elemSize();
-	out_container << imgSize;
-	if(send_words(fd, &out_container, message_buffer) != 0){
-		perror("height send");
-		return;
-	}
+
 	message_buffer[0] = 4;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	while(1){

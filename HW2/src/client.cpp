@@ -128,7 +128,7 @@ int send_file(int *fd, FILE *file){
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		cout << "sent " << len << " words\n";
+		//cout << "sent " << len << " words\n";
 		len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	}
 	message_buffer[0] = 3;
@@ -285,7 +285,7 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	if(message_buffer[0] != 1) {
-		perror("size receiving");
+		cerr << "size receiving error : width\n";
 		return ;
 	}
 	int width = atoi((char*)message_buffer+3);
@@ -294,16 +294,11 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	if(message_buffer[0] != 1) {
-		perror("size receiving");
+		cerr << "size receiving error : height\n";
 		return ;
 	}
 	int height = atoi((char*)message_buffer+3);
-	// get the size of a frame in bytes 
-	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-		perror("request recv");
-		return;
-	}
-	int imgSize = atoi((char*)message_buffer + 3);
+
 
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
