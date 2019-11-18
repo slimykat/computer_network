@@ -306,6 +306,15 @@ void play(int *fd, string *file_name){
 		 imgClient = imgClient.clone();
 	}
 	char c;
+	recv_message(fd, message_buffer, MAXDATASIZE);
+	for (int i = 0 ; i < MAXDATASIZE ; i ++){
+		cout << (int)message_buffer[i];
+	}
+	cout <<endl;
+	recv_frame(fd, imgClient.data, message_buffer);
+	imshow("test", imgClient);
+
+	/*
 	while(1){
 		// if video ended, exit
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
@@ -337,8 +346,9 @@ void play(int *fd, string *file_name){
 		message_buffer[0] = 4;
 		send_message(fd, message_buffer, MAXDATASIZE);
 	}
+	*/
 	////////////////////////////////////////////////////
-	destroyAllWindows();
+	//destroyAllWindows();
 	return;
 }
 
