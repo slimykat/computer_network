@@ -243,15 +243,25 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	int width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	out_container << width;
 	if(send_words(fd, &out_container, message_buffer) != 0){
-		perror("width send");
+		cerr << ("width send");
 		return;
 	}
 	int height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 	out_container << height;
 	if(send_words(fd, &out_container, message_buffer) != 0){
-		perror("height send");
+		cerr << ("height send");
 		return;
 	}
+	// check if resolution is fine
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("play recv");
+		return;
+	}
+	if(message_buffer[0] == 0){	// error
+		cerr << "Resolution error\n";
+		return;
+	}
+
 	// get the size of a frame in bytes 
 	Mat imgServer;
 	imgServer = Mat::zeros(width, height, CV_8UC3);
