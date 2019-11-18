@@ -284,20 +284,15 @@ void play(int *fd, string *file_name){
 		perror("request recv");
 		return;
 	}
-	if(message_buffer[0] != 1) {
-		cerr << "size receiving error : width\n";
-		return ;
-	}
 	int width = atoi((char*)message_buffer+3);
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("request recv");
 		return;
 	}
-	if(message_buffer[0] != 1) {
-		cerr << "size receiving error : height\n";
-		return ;
-	}
 	int height = atoi((char*)message_buffer+3);
+	
+	message_buffer[0] = 1;
+	send_message(fd, message_buffer, MAXDATASIZE);
 
 
 	// allocate container to load frames 
