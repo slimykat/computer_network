@@ -257,7 +257,6 @@ void play(int *fd, string *file_name){
 	}
 
 	Mat imgClient;
-	
 	// get the resolution of the video
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("request recv");
@@ -286,20 +285,21 @@ void play(int *fd, string *file_name){
 		 imgClient = imgClient.clone();
 	}
 	bool playing = true;
+	string frame_data;
 	while(1){
 		
 		// get the size of a frame in bytes 
-		int imgSize = imgServer.total() * imgServer.elemSize();
-		
-		// allocate a buffer to load the frame (there would be 2 buffers in the world of the Internet)
-		unsigned char buffer[imgSize];
+		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+			perror("request recv");
+			return;
+		}
+		int imgSize = atoi(message_buffer + 3);
 		
 		// copy a frame to the buffer
-		
-		
+		recv_words(fd, &frame_data);
+
 		// copy a fream from buffer to the container on client
-		uchar *iptr = imgClient.data;
-		memcpy(iptr,buffer,imgSize);
+		memcpy(imgClient.data, frame_data.c_str(), imgSize);
 	  
 		imshow("Video", imgClient);
 		// Press ESC on keyboard to exit
@@ -308,8 +308,12 @@ void play(int *fd, string *file_name){
 		char c = (char)waitKey(33.3333);
 		if(c==27)
 			break;
+		message_buffer[0] = 4;
+		send_message(fd, message_buffer, MAXDATASIZE);
 	}
 	////////////////////////////////////////////////////
+	message_buffer[0] = 3;
+	send_message(fd, message_buffer, MAXDATASIZE);
 	cap.release();
 	destroyAllWindows();
 	return 0;

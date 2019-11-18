@@ -54,7 +54,7 @@ int send_message(int *fd, unsigned char *message, int len){
 	return 0;
 }
 
-int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to terminal, put and get
+int recv_file(int *fd, FILE *out_file, unsigned char message_buffer[MAXDATASIZE]){	// to file, ex:ls write to terminal, put and get
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
 	while(stat == 0){
