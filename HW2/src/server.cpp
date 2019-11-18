@@ -273,11 +273,10 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	imgServer = Mat::zeros(height, width, CV_8UC3);
 	cap >> imgServer;
 	int imgSize = imgServer.total() * imgServer.elemSize();
-	message_buffer[0] = 0;
+	message_buffer[0] = 1;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	send_frame(fd, imgServer.data, message_buffer, imgSize);
 	while(1){
-		imshow("test",imgServer);
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == 0){
 			if(message_buffer[0] == 3)break;
 		}
