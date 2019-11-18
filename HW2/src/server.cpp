@@ -244,7 +244,7 @@ int main(int argc , char **argv){
 			exit(1);
 		}
 	}
-
+	chdir(Server);
 	/// TCP connection section ///
 	int sockfd, new_fd, yes = 1;
 	struct addrinfo hints, *servinfo, *p;

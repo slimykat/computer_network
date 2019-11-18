@@ -239,7 +239,7 @@ int main(int argc , char **argv){
 			exit(1);
 		}
 	}
-
+	chdir(Client);
 	/// TCP connection section ///
 	int sockfd;
 	unsigned char data_buffer[MAXDATASIZE];
