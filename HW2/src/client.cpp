@@ -178,7 +178,7 @@ void put(int *fd, string * file_name){
 		// write to stdout
 		stringstream ss;
 		ss << (*file_name);
-		if(send_words(fd, &ss) != 0) {return};
+		if(send_words(fd, &ss) != 0) {return;}
 		send_file(fd, in_file);
 	}
 	
