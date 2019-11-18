@@ -266,7 +266,7 @@ void play(int *fd, string *file_name){
 		perror("size receiving");
 		return ;
 	}
-	int width = atoi(message_buffer+3);
+	int width = atoi((char*)message_buffer+3);
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("request recv");
 		return;
@@ -275,7 +275,7 @@ void play(int *fd, string *file_name){
 		perror("size receiving");
 		return ;
 	}
-	int height = atoi(message_buffer+3);
+	int height = atoi((char*)message_buffer+3);
 	
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
@@ -293,7 +293,7 @@ void play(int *fd, string *file_name){
 			perror("request recv");
 			return;
 		}
-		int imgSize = atoi(message_buffer + 3);
+		int imgSize = atoi((char*)message_buffer + 3);
 		
 		// copy a frame to the buffer
 		recv_words(fd, &frame_data);
@@ -314,9 +314,8 @@ void play(int *fd, string *file_name){
 	////////////////////////////////////////////////////
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
-	cap.release();
 	destroyAllWindows();
-	return 0;
+	return;
 }
 
 int main(int argc , char **argv){
