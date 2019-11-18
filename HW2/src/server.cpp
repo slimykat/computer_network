@@ -304,6 +304,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 			}
 		}
 		imshow("Server", imgServer);
+		waitKey(33);
 		cap >> imgServer;
 	}
 	cap.release();

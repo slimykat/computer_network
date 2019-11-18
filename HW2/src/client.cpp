@@ -307,7 +307,6 @@ void play(int *fd, string *file_name){
 	if(!imgClient.isContinuous()){
 		 imgClient = imgClient.clone();
 	}
-	char c;
 
 	while(1){
 		// if video ended, exit
@@ -329,7 +328,7 @@ void play(int *fd, string *file_name){
 		// Press ESC on keyboard to exit
 		// notice: this part is necessary due to openCV's design.
 		// waitKey means a delay to get the next frame.
-		c = (char)waitKey(33);
+		char c = (char)waitKey(33);
 		if(c==27){
 			cout << "closing video\n";
 			message_buffer[0] = 3;
