@@ -311,7 +311,7 @@ void play(int *fd, string *file_name){
 		cout << (int)message_buffer[i];
 	}
 	cout <<endl;
-	recv_frame(fd, imgClient.data, message_buffer);
+	recv_frame(fd, imgClient.data);
 	imshow("test", imgClient);
 
 	/*
