@@ -201,7 +201,7 @@ void get(int *fd, string *file_name){
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		return;
 	}
-	if(essage_buffer[0] == 1 && message_buffer[3] == 1) {
+	if(message_buffer[0] == 1 && message_buffer[3] == 1) {
 		// send file name
 		stringstream ss;
 		ss << (*file_name);
@@ -215,7 +215,7 @@ void get(int *fd, string *file_name){
 			return;
 		}
 		// write to file
-		remove(filenameStr.c_str());				// prevent overlapping
+		remove(filenameStr->c_str());				// prevent overlapping
 		FILE *out_file = fopen(filenameStr->c_str(), "wb");
 		recv_file(fd, out_file);
 		fclose(out_file);
