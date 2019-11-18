@@ -283,7 +283,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 			break;
 		}
 		if(imgServer.empty()){
-			message_buffer[0] = 3;
+			message_buffer[0] = 0;
 			send_message(fd, message_buffer, MAXDATASIZE); // reach to the end of the video file
 			break;
 		}else{

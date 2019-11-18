@@ -312,7 +312,7 @@ void play(int *fd, string *file_name){
 			perror("play recv");
 			return;
 		}
-		if(message_buffer[0] != 4){	// ended
+		if(message_buffer[0] == 0){	// ended
 			cout << "video ended\n";
 			for (int i = 0 ; i < MAXDATASIZE ; i ++){
 				cout << (int)message_buffer[i];
@@ -320,6 +320,7 @@ void play(int *fd, string *file_name){
 			cout <<endl;
 			break;
 		}
+		cout << "playing" << endl;
 		// copy a frame to the buffer
 		recv_frame(fd, imgClient.data);
 		imshow("Video", imgClient);
