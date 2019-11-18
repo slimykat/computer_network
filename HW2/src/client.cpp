@@ -347,7 +347,7 @@ int main(int argc , char **argv){
 			run = false;
 			message_buffer[0] = 1;
 			message_buffer[3] = 5;
-			send_message(&sockfd, message_buffer, message_buffer);
+			send_message(&sockfd, message_buffer, MAXDATASIZE);
 		}else{
 			fprintf(stderr, "Command format error\n");
 			//cout << "75" << endl;
