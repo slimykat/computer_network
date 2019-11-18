@@ -226,6 +226,28 @@ void get(int *fd, string *file_name){
 	return;
 }
 
+void recv_frame(int *fd, unsigned char *frame_buffer){
+	
+	int bytes_read = 0;
+	unsigned short len, temp;
+	if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
+		return;
+	}
+	while(message_buffer[0] == 4){
+		len = message_buffer[1];
+		temp = message_buffer[2];
+		len = (message_len | (temp << 8));
+
+		memcpy(message_buffer + 3, frame_buffer + bytes_read, len);
+		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return;
+		}
+		bytes_read += len;
+	}
+
+	return;
+}
+
 void play(int *fd, string *file_name){
 	
 	// send play request
@@ -237,7 +259,7 @@ void play(int *fd, string *file_name){
 		perror("request recv");
 		return;
 	}
-	if(!(message_buffer[0] == 1 && message_buffer[3] == 1)){
+	if(message_buffer[0] == 0){
 		cerr << "reuest rejected\n";
 		return;
 	}
@@ -251,7 +273,7 @@ void play(int *fd, string *file_name){
 		perror("request recv");
 		return;
 	}
-	if(message_buffer[0] == 1 && message_buffer[3] == 0){
+	if(message_buffer[0] == 0){
 		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
 		return;
 	}
@@ -276,7 +298,13 @@ void play(int *fd, string *file_name){
 		return ;
 	}
 	int height = atoi((char*)message_buffer+3);
-	
+	// get the size of a frame in bytes 
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("request recv");
+		return;
+	}
+	int imgSize = atoi((char*)message_buffer + 3);
+
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
 
@@ -284,36 +312,32 @@ void play(int *fd, string *file_name){
 	if(!imgClient.isContinuous()){
 		 imgClient = imgClient.clone();
 	}
-	bool playing = true;
-	string frame_data;
+	char c;
 	while(1){
-		
-		// get the size of a frame in bytes 
+		// if video ended, exit
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-			perror("request recv");
+			perror("play recv");
 			return;
 		}
-		int imgSize = atoi((char*)message_buffer + 3);
-		
+		if(message_buffer[0] == 3){	// ended
+			break;
+		}
 		// copy a frame to the buffer
-		recv_words(fd, &frame_data);
-
-		// copy a fream from buffer to the container on client
-		memcpy(imgClient.data, frame_data.c_str(), imgSize);
-	  
+		recv_frame(fd, imgClient.data, imgSize);
 		imshow("Video", imgClient);
 		// Press ESC on keyboard to exit
 		// notice: this part is necessary due to openCV's design.
 		// waitKey means a delay to get the next frame.
-		char c = (char)waitKey(33.3333);
-		if(c==27)
+		c = (char)waitKey(33.3333);
+		if(c==27){
+			message_buffer[0] = 3;
+			send_message(fd, message_buffer, MAXDATASIZE);
 			break;
+		}
 		message_buffer[0] = 4;
 		send_message(fd, message_buffer, MAXDATASIZE);
 	}
 	////////////////////////////////////////////////////
-	message_buffer[0] = 3;
-	send_message(fd, message_buffer, MAXDATASIZE);
 	destroyAllWindows();
 	return;
 }

@@ -195,6 +195,98 @@ void get(int  *fd, unsigned char message_buffer[MAXDATASIZE]){
 	return;
 }
 
+void send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buffer[MAXDATASIZE], int bytes){
+	message_buffer[0] = 4;
+	unsigned short len = MAXDATASIZE - 3;
+	message_buffer[1] = (len & 511);
+	message_buffer[2] = (len >> 8);
+	int bytes_read = 0;
+	while(bytes > MAXDATASIZE){
+		memcpy(message_buffer + 3, frame_buffer + bytes_read, MAXDATASIZE - 3);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return;
+		}
+		bytes_read += (MAXDATASIZE-3);
+		bytes -= (MAXDATASIZE - 3);
+	}
+	len = bytes;
+	if(len > 0){
+		message_buffer[1] = (len & 511);
+		message_buffer[2] = (len >> 8);
+		memcpy(message_buffer + 3, frame_buffer+bytes_read, len);
+		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+			return;
+		}	
+	}
+	message_buffer[0] = 3;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	return 0;
+}
+
+void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
+	string temp;
+	if(recv_words(fd, &temp, message_buffer) != 0){
+		return;
+	}
+	VideoCapture cap(temp.c_str());
+	if(!cap.isOpened()){					// check if file exist
+		message_buffer[0] = 0;
+		send_message(fd, message_buffer, MAXDATASIZE);
+		return;
+	}
+	message_buffer[0] = 1;
+	send_message(fd, message_buffer, MAXDATASIZE);	// tell client that file exist
+
+	// send the resolution of the video
+	stringstream out_container;
+
+	int width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+	out_container << width;
+	if(send_words(fd, &out_container, message_buffer) != 0){
+		perror("width send");
+		return;
+	}
+	int height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	out_container << height;
+	if(send_words(fd, &out_container, message_buffer) != 0){
+		perror("height send");
+		return;
+	}
+	// get the size of a frame in bytes 
+	imgServer = Mat::zeros(width, height, CV_8UC3);
+	cap >> imgServer;
+	int imgSize = imgServer.total() * imgServer.elemSize();
+	out_container << imgSize;
+	if(send_words(fd, &out_container, message_buffer) != 0){
+		perror("height send");
+		return;
+	}
+	message_buffer[0] = 4;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	while(1){
+		send_frame(fd, imgServer.data, message_buffer, imgSize);
+		// check if client still need frames
+		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+			perror("play recv");
+			return;
+		}
+		if(message_buffer[0] == 3){	// ended
+			break;
+		}
+
+		if(imgServer.empty()){
+			message_buffer[0] = 3;
+			send_message(fd, message_buffer, MAXDATASIZE); // reach to the end of the video file
+			break;
+		}else{
+			message_buffer[0] = 4;
+			send_message(fd, message_buffer, MAXDATASIZE);
+		}
+		cap >> imgServer;
+	}
+	return;
+}
+
 void command_handle(int *fd){
 	unsigned char message_buffer[MAXDATASIZE];
 
@@ -215,6 +307,7 @@ void command_handle(int *fd){
 			get(fd, message_buffer);
 		}else if(message_buffer[3] == 4){	// play
 			answer_YesNo(fd, message_buffer, true);
+			play(fd, message_buffer);
 		}else if(message_buffer[3] == 5){	// close
 			close(*fd);
 			return;
@@ -226,7 +319,7 @@ void command_handle(int *fd){
 		int count;
 		ioctl(*fd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
-    	#endif
+	 	#endif
 	}
 	// error occur
 	message_buffer[0] = 0;
@@ -237,7 +330,7 @@ void command_handle(int *fd){
 int main(int argc , char **argv){
 	
 	if(argc != 2){
-		fprintf(stderr, "usage : ./server ip:port\n");
+		fprintf(stderr, "usage : ./server port\n");
 		return 0;
 	}
 
@@ -295,7 +388,6 @@ int main(int argc , char **argv){
 			close(sockfd);
 			continue;
 		}
-
 		break;
 	}
 
