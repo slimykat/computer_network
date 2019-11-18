@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
@@ -212,7 +213,7 @@ void command_handle(int *fd){
 		}
 		#ifndef DEBUG2
 		int count;
-		ioctl(sockfd, FIONREAD, &count);
+		ioctl(fd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
     	#endif
 	}
