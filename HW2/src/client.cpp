@@ -186,7 +186,7 @@ void put(int *fd, string * file_name){
 }
 
 void get(int *fd){
-
+/*
 	remove(message_buffer+2);			// prevent overlapping
 	FILE *out_file = fopen(message_buffer+2, "wb");
 
@@ -196,7 +196,7 @@ void get(int *fd){
 	send_message(fd, message_buffer, MAXDATASIZE);
 
 	recv_all(fd, out_file, MAXDATASIZE);
-	close(out_file);
+	fclose(out_file);*/
 }
 
 int main(int argc , char **argv){
