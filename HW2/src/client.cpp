@@ -215,8 +215,8 @@ void get(int *fd, string *file_name){
 			return;
 		}
 		// write to file
-		remove(filenameStr->c_str());				// prevent overlapping
-		FILE *out_file = fopen(filenameStr->c_str(), "wb");
+		remove(file_name->c_str());				// prevent overlapping
+		FILE *out_file = fopen(file_name->c_str(), "wb");
 		recv_file(fd, out_file);
 		fclose(out_file);
 	}
