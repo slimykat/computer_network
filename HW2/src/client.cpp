@@ -279,17 +279,19 @@ void play(int *fd, string *file_name){
 	}
 	cout << "confirmed name\n";
 	Mat imgClient;
+
 	// get the resolution of the video
-	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+	string resol;
+	if(recv_words(fd, &resol) != 0){
 		perror("request recv");
 		return;
 	}
-	int width = atoi((char*)message_buffer+3);
-	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+	int width = atoi(resol.c_str());
+	if(recv_words(fd, &resol) != 0){
 		perror("request recv");
 		return;
 	}
-	int height = atoi((char*)message_buffer+3);
+	int height = atoi(resol.c_str());
 	cout << "width = " << width << "\nheight = " << height << endl;
 	message_buffer[0] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
