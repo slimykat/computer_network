@@ -112,7 +112,7 @@ int send_words(int *fd, stringstream *words, unsigned char message_buffer[MAXDAT
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		words->read(message_buffer+3, MAXDATASIZE-3);
+		words->read((char*)message_buffer+3, MAXDATASIZE-3);
 	}
 	// end sending
 	message_buffer[0] = 3;
