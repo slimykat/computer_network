@@ -53,7 +53,7 @@ int send_message( int*  fd, char *message, int len){
 	return 0;
 }
 
-int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to terminal, puts and gets
+int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to terminal, put and get
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
 	while(stat == 0){
@@ -100,7 +100,6 @@ int recv_words(int *fd, string *words){							// to memory, ex:file names, frame
 }
 
 int send_words(int *fd, istringstream *words){
-	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
 	int len = 0;
 	words->read(message_buffer+3, MAXDATASIZE-3);
@@ -138,7 +137,6 @@ void ls(int *fd){
 	memset(message_buffer, 0, sizeof message_buffer);
 
 	message_buffer[0] = 1;					// send ls command
-	message_buffer[1] = 1;
 	message_buffer[3] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
@@ -149,43 +147,46 @@ void ls(int *fd){
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		return;
 	}
+	cout << "===================" << endl;
 	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
 		// write to stdout
 		recv_file(fd, stdout);
 		fflush(stdout);
 	}
-	return;
-}
-/*
-void put(const int const *fd){
-	FILE *in_file = fopen(message_buffer+2, "rb");
-	memset(message_buffer, 0, sizeof message_buffer);
-	message_buffer[0] = 2;
-	int bytes;
-	int sent_bytes;
-	while((bytes = read_to_buffer(in_file, message_buffer + 2, MAXDATASIZE - 2)) != 0){
-		
-		sent_bytes = MAXDATASIZE;
-		if(bytes <= 0){
-			if(bytes == -1){
-				perror("read");
-				fprintf(stderr, "put error\n");
-			}
-			break;
-		}else{
-			message_buffer[0] = 5;
-			message_buffer[1] = bytes;
-		}
-		send_message(fd, message, &sent_bytes);
-		memset(message_buffer, 0, sizeof message_buffer);
-	}
-	sent_bytes = MAXDATASIZE;
-	message_buffer[0] = -1;
-	send_message(fd, message_buffer, &sent_bytes);
+	cout << "===================" << endl;
 	return;
 }
 
-void get(const int const *fd){
+void put(int *fd, string * file_name){
+	FILE *in_file = fopen(file_name->c_str(), "rb");
+	if(in_file == NULL){					// check if file exist
+		cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
+		return;
+	}
+
+	message_buffer[0] = 1;					// send put command
+	message_buffer[3] = 2;
+	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+		perror("send_message");
+		return;
+	}
+	// receive answer from server
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		return;
+	}
+	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
+		// write to stdout
+		stringstream ss;
+		ss << (*file_name);
+		if(send_words(fd, &ss) != 0) {return};
+		send_file(fd, in_file);
+	}
+	
+	return;
+}
+
+void get(int *fd){
+
 	remove(message_buffer+2);			// prevent overlapping
 	FILE *out_file = fopen(message_buffer+2, "wb");
 
@@ -197,7 +198,7 @@ void get(const int const *fd){
 	recv_all(fd, out_file, MAXDATASIZE);
 	close(out_file);
 }
-*/
+
 int main(int argc , char **argv){
 	
 	if(argc != 2){
@@ -302,13 +303,11 @@ int main(int argc , char **argv){
 
 	freeaddrinfo(servinfo);
 	cout << "connection success\n";
-	//////////////////////////////
-
 
 	/// Instruction ///
 	bool run = true;
     while(run) {
-    	cout << "please type in a command\n";
+    	cout << "waiting for command...\n";
     	string buffer;
     	string file;
     	string instruction;
@@ -329,27 +328,22 @@ int main(int argc , char **argv){
 		}else if(instruction.compare("put") == 0){				// put
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-				//cout << "56" << endl;
         		continue;
 			}
-			//cout << instruction << " " << file << " 58 " << endl;
-			
+			put(&sockfd, &file);
 		}else if(instruction.compare("play") == 0){				// play
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-				//cout << "62" << endl;
         		continue;
 			}
-			//cout << instruction << " " << file << " 65 " << endl;
+			
 		}else if(instruction.compare("get") == 0){				// get
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-				//cout << "69" << endl;
         		continue;
 			}
-			//cout << instruction << " " << file << " 71 " << endl;
-		}
-		else if(instruction.compare("close") == 0){
+
+		}else if(instruction.compare("close") == 0){				// close
 			run = false;
 			message_buffer[0] = 1;
 			message_buffer[3] = 5;

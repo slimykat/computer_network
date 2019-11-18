@@ -154,24 +154,38 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	send_words(fd, &container, message_buffer);
 	return;
 }
-/*
+
+void answer_YesNo(int *fd, char message_buffer[MAXDATASIZE], bool y_n){
+	message_buffer[0] = 1;
+	message_buffer[3] = (y_n)?1:-1;
+	send_message(fd, message_buffer, MAXDATASIZE);
+}
+
 void put(int *fd, char message_buffer[MAXDATASIZE]){
-	remove(message_buffer+2);			// prevent overlapping
-	FILE *out_file = fopen(message_buffer+2, "wb");
+	// get file name
+	string filenameStr;
+	if(recv_words(fd, &filenameStr, message_buffer) != 0){
+		perror("put filename");
+		return;
+	}
+
+	remove(filenameStr.c_str());			// prevent overlapping
+	FILE *out_file = fopen(filenameStr.c_str(), "wb");
 
 	/// send message to start sending file
-	memset(message_buffer, 0, MAXDATASIZE);
-	message_buffer[0] = 1;
-	send_message(fd, message_buffer, MAXDATASIZE);
+	answer_YesNo(fd, message_buffer, true);
 
 	recv_file(fd, out_file, MAXDATASIZE);
 	close(out_file);
+	return;
 }
 
 void get(int  *fd){
 
-};
-*/
+}
+
+
+
 void command_handle(int *fd){
 	char message_buffer[MAXDATASIZE];
 
@@ -182,16 +196,15 @@ void command_handle(int *fd){
 			break;
 		}
 		if(message_buffer[3] == 1){		// ls
-			message_buffer[0] = 1;
-			message_buffer[3] = 1;
-			send_message(fd, message_buffer, MAXDATASIZE);
+			answer_YesNo(fd, message_buffer, true);
 			ls(fd, message_buffer);
 		}else if(message_buffer[3] == 2){	// put
-
+			answer_YesNo(fd, message_buffer, true);
+			put(fd, message_buffer);
 		}else if(message_buffer[3] == 3){	// get
-
+			answer_YesNo(fd, message_buffer, true);
 		}else if(message_buffer[3] == 4){	// play
-
+			answer_YesNo(fd, message_buffer, true);
 		}else if(message_buffer[3] == 5){	// close
 			close(*fd);
 			return;
