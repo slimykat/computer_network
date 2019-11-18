@@ -86,7 +86,7 @@ int recv_words(int *fd, string *words){							// to memory, ex:file names, frame
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			words->append(message_buffer+3, message_len);
+			words->append((char*)message_buffer+3, message_len);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
@@ -104,14 +104,14 @@ int recv_words(int *fd, string *words){							// to memory, ex:file names, frame
 int send_words(int *fd, stringstream *words){
 	message_buffer[0] = 2;
 	int len = 0;
-	words->read(message_buffer+3, MAXDATASIZE-3);
+	words->read((char*)message_buffer+3, MAXDATASIZE-3);
 	while((len = words->gcount()) != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		words->read(message_buffer+3, MAXDATASIZE-3);
+		words->read((char*)message_buffer+3, MAXDATASIZE-3);
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
