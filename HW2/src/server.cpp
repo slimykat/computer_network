@@ -22,6 +22,7 @@
 
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
+//#define DEBUG2
 using namespace std;
 
 //using namespace cv;
@@ -172,9 +173,6 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 	remove(filenameStr.c_str());			// prevent overlapping
 	FILE *out_file = fopen(filenameStr.c_str(), "wb");
 
-	/// send message to start sending file
-	answer_YesNo(fd, message_buffer, true);
-
 	recv_file(fd, out_file, message_buffer);
 	fclose(out_file);
 	return;
@@ -212,6 +210,11 @@ void command_handle(int *fd){
 			message_buffer[0] = -1;
 			send_message(fd, message_buffer, MAXDATASIZE);
 		}
+		#ifndef DEBUG2
+		int count;
+		ioctl(sockfd, FIONREAD, &count);
+		cout << "data in socket remains : " << count << "bytes\n";
+    	#endif
 	}
 	// error occur
 	message_buffer[0] = -1;
