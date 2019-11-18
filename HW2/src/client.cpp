@@ -316,6 +316,7 @@ void play(int *fd, string *file_name){
 	recv_frame(fd, imgClient.data);
 	while(1){
 		imshow("test", imgClient);
+		c = (char)waitKey(33.3333);
 		if(c==27){
 			cout << "closing video\n";
 			message_buffer[0] = 3;
