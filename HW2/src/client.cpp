@@ -168,8 +168,8 @@ void put(int *fd, string * file_name){
 		cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
 		return;
 	}
-
-	message_buffer[0] = 1;					// send put command
+	// send put command
+	message_buffer[0] = 1;
 	message_buffer[3] = 2;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
@@ -180,7 +180,6 @@ void put(int *fd, string * file_name){
 		return;
 	}
 	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
-		// write to stdout
 		stringstream ss;
 		ss << (*file_name);
 		if(send_words(fd, &ss) != 0) {return;}
@@ -190,18 +189,38 @@ void put(int *fd, string * file_name){
 	return;
 }
 
-void get(int *fd){
-/*
-	remove(message_buffer+2);			// prevent overlapping
-	FILE *out_file = fopen(message_buffer+2, "wb");
-
-	/// send message to start sending file
-	memset(message_buffer, 0, sizeof message_buffer);
+void get(int *fd, string *file_name){
+	// send get command
 	message_buffer[0] = 1;
-	send_message(fd, message_buffer, MAXDATASIZE);
-
-	recv_all(fd, out_file, MAXDATASIZE);
-	fclose(out_file);*/
+	message_buffer[3] = 3;
+	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
+		perror("send_message");
+		return;
+	}
+	// receive answer from server
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		return;
+	}
+	if(essage_buffer[0] == 1 && message_buffer[3] == 1) {
+		// send file name
+		stringstream ss;
+		ss << (*file_name);
+		if(send_words(fd, &ss) != 0) {return;}
+		// check if file exist
+		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+			return;
+		}
+		if(message_buffer[0] == 1 && message_buffer[3] == -1){
+			cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
+			return;
+		}
+		// write to file
+		remove(filenameStr.c_str());				// prevent overlapping
+		FILE *out_file = fopen(filenameStr.c_str(), "wb");
+		recv_file(fd, out_file);
+		fclose(out_file);
+	}
+	return;
 }
 
 int main(int argc , char **argv){

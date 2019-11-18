@@ -179,11 +179,25 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-void get(int  *fd){
-
+void get(int  *fd, char message_buffer[MAXDATASIZE]){
+	string file_name;
+	if(recv_words(fd, &file_name, message_buffer) != 0){
+		return;
+	}
+	FILE *in_file = fopen(file_name->c_str(), "rb");
+	if(in_file == NULL){					// check if file exist
+		message_buffer[0] = 1;
+		message_buffer[3] = -1;
+		send_message(fd, message_buffer, MAXDATASIZE);
+		return;
+	}
+	message_buffer[0] = 1;
+	message_buffer[3] = 1;
+	send_message(fd, message_buffer, MAXDATASIZE);
+	send_file(fd, in_file, message_buffer);
+	fclose(in_file);
+	return;
 }
-
-
 
 void command_handle(int *fd){
 	char message_buffer[MAXDATASIZE];
@@ -202,6 +216,7 @@ void command_handle(int *fd){
 			put(fd, message_buffer);
 		}else if(message_buffer[3] == 3){	// get
 			answer_YesNo(fd, message_buffer, true);
+			get(fd, message_buffer);
 		}else if(message_buffer[3] == 4){	// play
 			answer_YesNo(fd, message_buffer, true);
 		}else if(message_buffer[3] == 5){	// close
