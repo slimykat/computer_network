@@ -482,7 +482,7 @@ int main(int argc , char **argv){
 				fprintf(stderr, "Command format error\n");
 				continue;
 			}
-			
+			play(&sockfd, &file);
 		}else if(instruction.compare("get") == 0){				// get
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
