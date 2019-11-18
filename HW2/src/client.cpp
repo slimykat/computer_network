@@ -308,27 +308,7 @@ void play(int *fd, string *file_name){
 		 imgClient = imgClient.clone();
 	}
 	char c;
-	recv_message(fd, message_buffer, MAXDATASIZE);
-	for (int i = 0 ; i < MAXDATASIZE ; i ++){
-		cout << (int)message_buffer[i];
-	}
-	cout <<endl;
-	recv_frame(fd, imgClient.data);
-	while(1){
-		imshow("play", imgClient);
-		c = (char)waitKey(33.3333);
-		if(c==27){
-			cout << "closing video\n";
-			message_buffer[0] = 3;
-			send_message(fd, message_buffer, MAXDATASIZE);
-			break;
-		}
-		message_buffer[0] = 4;
-		send_message(fd, message_buffer, MAXDATASIZE);	
-	}
-	
 
-	/*
 	while(1){
 		// if video ended, exit
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
@@ -343,14 +323,13 @@ void play(int *fd, string *file_name){
 			cout <<endl;
 			break;
 		}
-		cout << "playing" << endl;
 		// copy a frame to the buffer
 		recv_frame(fd, imgClient.data);
 		imshow("Video", imgClient);
 		// Press ESC on keyboard to exit
 		// notice: this part is necessary due to openCV's design.
 		// waitKey means a delay to get the next frame.
-		c = (char)waitKey(33.3333);
+		c = (char)waitKey(33);
 		if(c==27){
 			cout << "closing video\n";
 			message_buffer[0] = 3;
@@ -360,9 +339,8 @@ void play(int *fd, string *file_name){
 		message_buffer[0] = 4;
 		send_message(fd, message_buffer, MAXDATASIZE);
 	}
-	*/
 	////////////////////////////////////////////////////
-	//destroyAllWindows();
+	destroyAllWindows();
 	return;
 }
 
