@@ -318,7 +318,7 @@ int main(int argc , char **argv){
     	string instruction;
     	#ifndef DEBUG2
 		int count;
-		ioctl(fd, FIONREAD, &count);
+		ioctl(sockfd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
     	#endif
 
