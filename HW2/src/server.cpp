@@ -236,18 +236,23 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	message_buffer[3] = 1;
 	message_buffer[4] = 1;
 	send_message(fd, message_buffer, MAXDATASIZE);	// tell client that file exist
+	cout << "confirmed name\n";
 
 	// send the resolution of the video
 	stringstream out_container;
 
 	int width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+	out_container.clear();
 	out_container << width;
+	out_container << '\0';
 	if(send_words(fd, &out_container, message_buffer) != 0){
 		cerr << ("width send");
 		return;
 	}
 	int height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	out_container.clear();
 	out_container << height;
+	out_container << '\0';
 	if(send_words(fd, &out_container, message_buffer) != 0){
 		cerr << ("height send");
 		return;
@@ -264,7 +269,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	cout << "complete sending resolutions\n";
 
 	return;
-	
+
 	// get the size of a frame in bytes 
 	Mat imgServer;
 	imgServer = Mat::zeros(height, width, CV_8UC3);

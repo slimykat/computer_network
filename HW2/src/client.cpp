@@ -260,7 +260,7 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	if(message_buffer[0] == 0){
-		cerr << "reuest rejected\n";
+		cerr << "request rejected\n";
 		return;
 	}
 
@@ -277,7 +277,7 @@ void play(int *fd, string *file_name){
 		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
 		return;
 	}
-
+	cout << "confirmed name\n";
 	Mat imgClient;
 	// get the resolution of the video
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
@@ -290,7 +290,7 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	int height = atoi((char*)message_buffer+3);
-
+	cout << "width = " << width << "\nheight = " << height << endl;
 	message_buffer[0] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("play send");
