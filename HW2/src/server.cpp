@@ -60,6 +60,7 @@ int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to 
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
+			cout << "received" << message_len << "words\n";
 			fwrite(message_buffer+3, 1, message_len, out_file);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;

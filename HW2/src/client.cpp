@@ -120,12 +120,13 @@ int send_file(int *fd, FILE *file){
 	memset(message_buffer, 0, sizeof message_buffer);
 	message_buffer[0] = 2;
 	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
-	while(len  != 0){
+	while(len != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
+		cout << "sent" << len << "words\n";
 		len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	}
 	message_buffer[0] = 3;
