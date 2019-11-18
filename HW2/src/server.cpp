@@ -121,7 +121,7 @@ int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
 	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
-	while(len  != 0){
+	while(len != 0){
 		message_buffer[1] = (len & 511);
 		message_buffer[2] = (len >> 8);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
@@ -144,8 +144,8 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	
 	while((dptr = readdir(dp)) != NULL){
 		string filenameStr(dptr->d_name);
-		if(filenameStr.compare(".") == 0){ continue; }
-		if(filenameStr.compare("..") == 0){ continue;}
+		//if(filenameStr.compare(".") == 0){ continue; }
+		//if(filenameStr.compare("..") == 0){ continue;}
 		container << filenameStr;
 		container << "\n";
 	}
@@ -296,12 +296,10 @@ int main(int argc , char **argv){
 		return 2;
 	}
 
-
-	printf("server: waiting for connections...\n");
-
 	//////////////////////////////
 
 	while(1) { // 主要的 accept() 迴圈
+		printf("server: waiting for connections...\n");
 		sin_size = sizeof their_addr;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
 		if (new_fd == -1) {
