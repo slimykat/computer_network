@@ -213,7 +213,7 @@ void command_handle(int *fd){
 		}
 		#ifndef DEBUG2
 		int count;
-		ioctl(fd, FIONREAD, &count);
+		ioctl(*fd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
     	#endif
 	}
