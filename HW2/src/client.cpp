@@ -371,7 +371,7 @@ int main(int argc , char **argv){
 				fprintf(stderr, "Command format error\n");
         		continue;
 			}
-
+			get(&sockfd, &file);
 		}else if(instruction.compare("close") == 0){				// close
 			run = false;
 			message_buffer[0] = 1;
