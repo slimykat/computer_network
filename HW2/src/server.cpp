@@ -259,6 +259,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		cerr << "Resolution error\n";
 		return;
 	}
+	cout << "complete sending resolutions\n";
 
 	// get the size of a frame in bytes 
 	Mat imgServer;
@@ -306,17 +307,21 @@ void command_handle(int *fd){
 		if(message_buffer[0] != 1){
 			break;
 		}
-		cout << "command : " << message_buffer[3] << endl;
+		cout << "command : ";
 		if(message_buffer[3] == 1){		// ls
+			cout << "ls\n";
 			answer_YesNo(fd, message_buffer, true);
 			ls(fd, message_buffer);
 		}else if(message_buffer[3] == 2){	// put
+			cout << "put\n";
 			answer_YesNo(fd, message_buffer, true);
 			put(fd, message_buffer);
 		}else if(message_buffer[3] == 3){	// get
+			cout << "get\n";
 			answer_YesNo(fd, message_buffer, true);
 			get(fd, message_buffer);
 		}else if(message_buffer[3] == 4){	// play
+			cout << "play\n";
 			answer_YesNo(fd, message_buffer, true);
 			play(fd, message_buffer);
 		}else if(message_buffer[3] == 5){	// close

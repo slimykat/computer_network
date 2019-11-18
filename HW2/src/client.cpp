@@ -312,7 +312,7 @@ void play(int *fd, string *file_name){
 			perror("play recv");
 			return;
 		}
-		if(message_buffer[0] == 3){	// ended
+		if(message_buffer[0] != 4){	// ended
 			cout << "video ended\n";
 			break;
 		}
