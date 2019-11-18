@@ -315,7 +315,7 @@ void play(int *fd, string *file_name){
 		if(message_buffer[0] != 4){	// ended
 			cout << "video ended\n";
 			for (int i = 0 ; i < MAXDATASIZE ; i ++){
-				cout << message_buffer[i];
+				cout << (int)message_buffer[i];
 			}
 			cout <<endl;
 			break;
