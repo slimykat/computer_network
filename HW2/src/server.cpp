@@ -268,8 +268,6 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	}
 	cout << "complete sending resolutions\n";
 
-	return;
-
 	// get the size of a frame in bytes 
 	Mat imgServer;
 	imgServer = Mat::zeros(height, width, CV_8UC3);

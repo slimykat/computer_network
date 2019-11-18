@@ -299,7 +299,6 @@ void play(int *fd, string *file_name){
 		return;
 	}
 	cout << "get resolutions, preparing video frame\n";
-	return;
 
 	// allocate container to load frames 
 	imgClient = Mat::zeros(height, width, CV_8UC3);
