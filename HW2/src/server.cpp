@@ -139,7 +139,7 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	
 	DIR *dp = NULL;
 	struct dirent *dptr = NULL;
-	dp = opendir(Server);
+	dp = opendir(".");
 	stringstream container;
 	
 	while((dptr = readdir(dp)) != NULL){
