@@ -13,13 +13,13 @@
 #include <netdb.h>
 #include <signal.h>
 #include <dirent.h>
-//#include "opencv2/opencv.hpp"
+#include "opencv2/opencv.hpp"
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
+	// INSTRUCTION:: <0:probe, 0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
 	// command >> 1:ls, 2:put, 3:get, 4:play, 5:close connection
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
+	// INSTRUCTION:: <0:probe, 0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
 #define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
@@ -28,7 +28,7 @@ using namespace std;
 
 //using namespace cv;
 
-int recv_message(int *fd, char *message, int len){
+int recv_message(int *fd, unsigned char *message, int len){
 	int total = 0;
 	int bytesleft = len;
 	int n;
@@ -41,7 +41,7 @@ int recv_message(int *fd, char *message, int len){
 	return 0;
 }
 
-int send_message(int *fd, char *message, int len){
+int send_message(int *fd, unsigned char *message, int len){
 	int total = 0; 			// 我們已經送出多少 bytes 的資料
 	int bytesleft = len; 	// 我們還有多少資料要送
 	int n;
@@ -54,7 +54,7 @@ int send_message(int *fd, char *message, int len){
 	return 0;
 }
 
-int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to file, ex:ls write to terminal, puts and gets
+int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to terminal, put and get
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
 	while(stat == 0){
@@ -62,12 +62,11 @@ int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to 
 			message_len = message_buffer[1];
 			temp = message_buffer[2];
 			message_len = (message_len | (temp << 8));
-			cout << "received" << message_len << "words\n";
 			fwrite(message_buffer+3, 1, message_len, out_file);
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
-			return -2;
+			return -1;
 		}
 		stat = recv_message(fd, message_buffer, MAXDATASIZE);
 		if(stat == -1){
@@ -77,7 +76,8 @@ int recv_file(int *fd, FILE *out_file, char message_buffer[MAXDATASIZE]){	// to 
 	}
 	return 0;
 }
-int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to memory, ex:file names, frame size, etc.
+
+int recv_words(int *fd, string *words, unsigned char message_buffer[MAXDATASIZE]){	// to memory, ex:file names, frame size, etc.
 	words->clear();
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
 	unsigned short message_len, temp;
@@ -90,7 +90,7 @@ int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to 
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
-			return -2;
+			return -1;
 		}
 		stat = recv_message(fd, message_buffer, MAXDATASIZE);
 		if(stat == -1){
@@ -101,7 +101,7 @@ int recv_words(int *fd, string *words, char message_buffer[MAXDATASIZE]){	// to 
 	return 0;
 }
 
-int send_words(int *fd, stringstream *words, char message_buffer[MAXDATASIZE]){
+int send_words(int *fd, stringstream *words, unsigned char message_buffer[MAXDATASIZE]){
 	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	int len = 0;
@@ -120,7 +120,7 @@ int send_words(int *fd, stringstream *words, char message_buffer[MAXDATASIZE]){
 	return 0;
 }
 
-int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
+int send_file(int *fd, FILE *file, unsigned char message_buffer[MAXDATASIZE]){
 	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
@@ -137,7 +137,7 @@ int send_file(int *fd, FILE *file, char message_buffer[MAXDATASIZE]){
 	return 0;
 }
 
-void ls(int *fd, char message_buffer[MAXDATASIZE]){
+void ls(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	// prepare
 	
 	DIR *dp = NULL;
@@ -157,13 +157,12 @@ void ls(int *fd, char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-void answer_YesNo(int *fd, char message_buffer[MAXDATASIZE], bool y_n){
-	message_buffer[0] = 1;
-	message_buffer[3] = (y_n)?1:-1;
+void answer_YesNo(int *fd, unsigned char message_buffer[MAXDATASIZE], bool y_n){
+	message_buffer[0] = (y_n)? 1:0;
 	send_message(fd, message_buffer, MAXDATASIZE);
 }
 
-void put(int *fd, char message_buffer[MAXDATASIZE]){
+void put(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	// get file name
 	string filenameStr;
 	if(recv_words(fd, &filenameStr, message_buffer) != 0){
@@ -179,20 +178,18 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-void get(int  *fd, char message_buffer[MAXDATASIZE]){
+void get(int  *fd, unsigned char message_buffer[MAXDATASIZE]){
 	string file_name;
 	if(recv_words(fd, &file_name, message_buffer) != 0){
 		return;
 	}
 	FILE *in_file = fopen(file_name.c_str(), "rb");
 	if(in_file == NULL){					// check if file exist
-		message_buffer[0] = 1;
-		message_buffer[3] = -1;
+		message_buffer[0] = 0;
 		send_message(fd, message_buffer, MAXDATASIZE);
 		return;
 	}
 	message_buffer[0] = 1;
-	message_buffer[3] = 1;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	send_file(fd, in_file, message_buffer);
 	fclose(in_file);
@@ -200,7 +197,7 @@ void get(int  *fd, char message_buffer[MAXDATASIZE]){
 }
 
 void command_handle(int *fd){
-	char message_buffer[MAXDATASIZE];
+	unsigned char message_buffer[MAXDATASIZE];
 
 	while(1){
 		cout << "receiving command\n";
@@ -223,7 +220,7 @@ void command_handle(int *fd){
 			close(*fd);
 			return;
 		}else{								// unknown command
-			message_buffer[0] = -1;
+			message_buffer[0] = 0;
 			send_message(fd, message_buffer, MAXDATASIZE);
 		}
 		#ifndef DEBUG2
@@ -233,7 +230,7 @@ void command_handle(int *fd){
     	#endif
 	}
 	// error occur
-	message_buffer[0] = -1;
+	message_buffer[0] = 0;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	close(*fd);
 }

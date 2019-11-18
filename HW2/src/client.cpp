@@ -12,14 +12,14 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <dirent.h>
-//#include "opencv2/opencv.hpp"
+#include "opencv2/opencv.hpp"
 
 #define MAXDATASIZE 1024 // bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
+	// INSTRUCTION:: <0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
 	// command >> 1:ls, 2:put, 3:get, 4:play 5:close
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
-	// INSTRUCTION:: <0:probe, -1:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
+	// INSTRUCTION:: <0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
 #define Client "./client_files"
 #define DEBUG1
@@ -27,8 +27,8 @@
 using namespace std;
 //using namespace cv;
 
-char message_buffer[MAXDATASIZE];
-int recv_message(int *fd, char *message, int len){
+unsigned char message_buffer[MAXDATASIZE];
+int recv_message(int *fd, unsigned char *message, int len){
 	int total = 0;
 	int bytesleft = len;
 	int n;
@@ -41,7 +41,7 @@ int recv_message(int *fd, char *message, int len){
 	return 0;
 }
 
-int send_message( int*  fd, char *message, int len){
+int send_message( int*  fd, unsigned char *message, int len){
 	int total = 0; 				// 我們已經送出多少 bytes 的資料
 	int bytesleft = len; 		// 我們還有多少資料要送
 	int n;
@@ -66,7 +66,7 @@ int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to termina
 		}else if(message_buffer[0] == 3){		// end
 			return 0;
 		}else{									// error?
-			return -2;
+			return -1;
 		}
 		stat = recv_message(fd, message_buffer, MAXDATASIZE);
 		if(stat == -1){
@@ -76,6 +76,7 @@ int recv_file(int *fd, FILE *out_file){							// to file, ex:ls write to termina
 	}
 	return 0;
 }
+
 int recv_words(int *fd, string *words){							// to memory, ex:file names, frame size, etc.
 	words->clear();
 	int stat = recv_message(fd, message_buffer, MAXDATASIZE);
@@ -147,13 +148,15 @@ void ls(int *fd){
 
 	// receive answer from server
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-		if(!(message_buffer[0] == 1 && message_buffer[3] == 1)){
-			perror("ls rejected");
-			return;
-		}
+		perror("ls recv message");
+		return;
+	}
+	if(message_buffer[0] == 0){
+		cerr << "ls rejected";
+		return;
 	}
 	cout << "===================" << endl;
-	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
+	if(message_buffer[0] == 1){	// command accepted
 		// write to stdout
 		recv_file(fd, stdout);
 		fflush(stdout);
@@ -179,7 +182,7 @@ void put(int *fd, string * file_name){
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		return;
 	}
-	if(message_buffer[0] == 1 && message_buffer[3] == 1){	// command accepted
+	if(message_buffer[0] == 1){	// command accepted
 		stringstream ss;
 		ss << (*file_name);
 		if(send_words(fd, &ss) != 0) {return;}
@@ -201,7 +204,7 @@ void get(int *fd, string *file_name){
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		return;
 	}
-	if(message_buffer[0] == 1 && message_buffer[3] == 1) {
+	if(message_buffer[0] == 1) {
 		// send file name
 		stringstream ss;
 		ss << (*file_name);
@@ -210,7 +213,7 @@ void get(int *fd, string *file_name){
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 			return;
 		}
-		if(message_buffer[0] == 1 && message_buffer[3] == -1){
+		if(message_buffer[0] == 0){
 			cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
 			return;
 		}
@@ -221,6 +224,95 @@ void get(int *fd, string *file_name){
 		fclose(out_file);
 	}
 	return;
+}
+
+void play(int *fd, string *file_name){
+	
+	// send play request
+	message_buffer[0] = 1;
+	message_buffer[3] = 4;
+	send_message(fd, message_buffer, MAXDATASIZE);
+
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("request recv");
+		return;
+	}
+	if(!(message_buffer[0] == 1 && message_buffer[3] == 1)){
+		cerr << "reuest rejected\n";
+		return;
+	}
+
+	// send file name, check if file exist
+	stringstream ss;
+	ss << *file_name;
+	send_words(fd, &ss);
+
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("request recv");
+		return;
+	}
+	if(message_buffer[0] == 1 && message_buffer[3] == 0){
+		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
+		return;
+	}
+
+	Mat imgClient;
+	
+	// get the resolution of the video
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("request recv");
+		return;
+	}
+	if(message_buffer[0] != 1) {
+		perror("size receiving");
+		return ;
+	}
+	int width = atoi(message_buffer+3);
+	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
+		perror("request recv");
+		return;
+	}
+	if(message_buffer[0] != 1) {
+		perror("size receiving");
+		return ;
+	}
+	int height = atoi(message_buffer+3);
+	
+	// allocate container to load frames 
+	imgClient = Mat::zeros(height, width, CV_8UC3);
+
+	// ensure the memory is continuous (for efficiency issue.)
+	if(!imgClient.isContinuous()){
+		 imgClient = imgClient.clone();
+	}
+	bool playing = true;
+	while(1){
+		
+		// get the size of a frame in bytes 
+		int imgSize = imgServer.total() * imgServer.elemSize();
+		
+		// allocate a buffer to load the frame (there would be 2 buffers in the world of the Internet)
+		unsigned char buffer[imgSize];
+		
+		// copy a frame to the buffer
+		
+		
+		// copy a fream from buffer to the container on client
+		uchar *iptr = imgClient.data;
+		memcpy(iptr,buffer,imgSize);
+	  
+		imshow("Video", imgClient);
+		// Press ESC on keyboard to exit
+		// notice: this part is necessary due to openCV's design.
+		// waitKey means a delay to get the next frame.
+		char c = (char)waitKey(33.3333);
+		if(c==27)
+			break;
+	}
+	////////////////////////////////////////////////////
+	cap.release();
+	destroyAllWindows();
+	return 0;
 }
 
 int main(int argc , char **argv){
@@ -239,7 +331,7 @@ int main(int argc , char **argv){
 	}
 
 	string PORT = ip_and_port.substr(pos + 1);
-    string IP = ip_and_port.substr(0, pos);
+	string IP = ip_and_port.substr(0, pos);
 
 	if(PORT.length() == 0 || IP.length() == 0){
 		fprintf(stderr, "usage : ./client ip:port\n");
@@ -285,7 +377,6 @@ int main(int argc , char **argv){
 	
 	#ifndef DEBUG1
 	fprintf(stderr, "IP addresses for %s :\n\n" , IP.c_str());
-	
 	for(p = servinfo ; p != NULL ; p = p->ai_next) {
 		void *addr;
 		char ipver[5];
@@ -306,7 +397,6 @@ int main(int argc , char **argv){
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
 		fprintf(stderr,"%s: %s\n", ipver, ipstr);
 	}
-
 	#endif
 	p = servinfo;
 	if (p == NULL) {
@@ -321,8 +411,8 @@ int main(int argc , char **argv){
 
 	if(connect(sockfd, p->ai_addr, p->ai_addrlen) == -1){
 		close(sockfd);
-    	perror("client: connect");
-    	return(2);
+		perror("client: connect");
+		return(2);
 	}
 
 	freeaddrinfo(servinfo);
@@ -330,46 +420,46 @@ int main(int argc , char **argv){
 
 	/// Instruction ///
 	bool run = true;
-    while(run) {
-    	cout << "waiting for command...\n";
-    	string buffer;
-    	string file;
-    	string instruction;
-    	#ifndef DEBUG2
+	while(run) {
+		cout << "waiting for command...\n";
+		string buffer;
+		string file;
+		string instruction;
+		#ifndef DEBUG2
 		int count;
 		ioctl(sockfd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
-    	#endif
+		#endif
 
-    	getline(cin, buffer);
-    	if(buffer.length() == 0)continue;
-        //cout << "Buffer : " << buffer << endl;
-        istringstream ss(buffer);
+		getline(cin, buffer);
+		if(buffer.length() == 0)continue;
+		//cout << "Buffer : " << buffer << endl;
+		istringstream ss(buffer);
 		if(ss){ss >> instruction;}
 		if(ss){ss >> file;}
 
-    	if(instruction.compare("ls") == 0){						// ls
+		if(instruction.compare("ls") == 0){						// ls
 			if(file.length() != 0){
 				fprintf(stderr, "Command format error\n");
-        		continue;
-        	}
-        	ls(&sockfd);
+				continue;
+			}
+			ls(&sockfd);
 		}else if(instruction.compare("put") == 0){				// put
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-        		continue;
+				continue;
 			}
 			put(&sockfd, &file);
 		}else if(instruction.compare("play") == 0){				// play
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-        		continue;
+				continue;
 			}
 			
 		}else if(instruction.compare("get") == 0){				// get
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
-        		continue;
+				continue;
 			}
 			get(&sockfd, &file);
 		}else if(instruction.compare("close") == 0){				// close
@@ -380,7 +470,7 @@ int main(int argc , char **argv){
 		}else{
 			fprintf(stderr, "Command format error\n");
 			//cout << "75" << endl;
-    		continue;
+			continue;
 		}
 	}
 	
