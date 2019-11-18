@@ -175,8 +175,8 @@ void put(int *fd, char message_buffer[MAXDATASIZE]){
 	/// send message to start sending file
 	answer_YesNo(fd, message_buffer, true);
 
-	recv_file(fd, out_file, MAXDATASIZE);
-	close(out_file);
+	recv_file(fd, out_file, message_buffer);
+	fclose(out_file);
 	return;
 }
 
