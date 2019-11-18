@@ -273,7 +273,7 @@ void play(int *fd, string *file_name){
 		perror("request recv");
 		return;
 	}
-	if(message_buffer[0] == 0){
+	if(!(message_buffer[0] == 1 && message_buffer[3] == 1 && message_buffer[4] == 1)){
 		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
 		return;
 	}

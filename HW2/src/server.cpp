@@ -233,6 +233,8 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		return;
 	}
 	message_buffer[0] = 1;
+	message_buffer[3] = 1;
+	message_buffer[4] = 1;
 	send_message(fd, message_buffer, MAXDATASIZE);	// tell client that file exist
 
 	// send the resolution of the video
@@ -255,7 +257,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		perror("play recv");
 		return;
 	}
-	if(message_buffer[0] == 0){	// error
+	if(message_buffer[0] != 1){	// error
 		cerr << "Resolution error\n";
 		return;
 	}
@@ -263,11 +265,11 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 
 	// get the size of a frame in bytes 
 	Mat imgServer;
-	imgServer = Mat::zeros(width, height, CV_8UC3);
+	imgServer = Mat::zeros(height, width, CV_8UC3);
 	cap >> imgServer;
 	int imgSize = imgServer.total() * imgServer.elemSize();
 	imshow("test",imgServer);
-	message_buffer[0] = 4;
+	message_buffer[0] = 0;
 	send_message(fd, message_buffer, MAXDATASIZE);
 	send_frame(fd, imgServer.data, message_buffer, imgSize);
 	/*
