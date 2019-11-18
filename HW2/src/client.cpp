@@ -22,7 +22,7 @@
 
 #define Client "./client_files"
 #define DEBUG1
-
+//#define DEBUG2
 using namespace std;
 //using namespace cv;
 
@@ -117,7 +117,7 @@ int send_words(int *fd, stringstream *words){
 }
 
 int send_file(int *fd, FILE *file){
-	memset(message_buffer, 0, sizeof message_buffer);
+	memset(message_buffer, 0, MAXDATASIZE);
 	message_buffer[0] = 2;
 	unsigned short len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	while(len != 0){
@@ -126,7 +126,7 @@ int send_file(int *fd, FILE *file){
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 			return -1;
 		}
-		cout << "sent" << len << "words\n";
+		cout << "sent " << len << " words\n";
 		len = fread(message_buffer+3, 1, MAXDATASIZE-3, file);
 	}
 	message_buffer[0] = 3;
@@ -315,6 +315,11 @@ int main(int argc , char **argv){
     	string buffer;
     	string file;
     	string instruction;
+    	#ifndef DEBUG2
+		int count;
+		ioctl(fd, FIONREAD, &count);
+		cout << "data in socket remains : " << cout << "bytes\n";
+    	#endif
 
     	getline(cin, buffer);
     	if(buffer.length() == 0)continue;
