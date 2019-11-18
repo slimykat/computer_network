@@ -314,7 +314,18 @@ void play(int *fd, string *file_name){
 	}
 	cout <<endl;
 	recv_frame(fd, imgClient.data);
-	imshow("test", imgClient);
+	while(1){
+		imshow("test", imgClient);
+		if(c==27){
+			cout << "closing video\n";
+			message_buffer[0] = 3;
+			send_message(fd, message_buffer, MAXDATASIZE);
+			break;
+		}
+		message_buffer[0] = 4;
+		send_message(fd, message_buffer, MAXDATASIZE);	
+	}
+	
 
 	/*
 	while(1){
