@@ -184,7 +184,7 @@ void get(int  *fd, char message_buffer[MAXDATASIZE]){
 	if(recv_words(fd, &file_name, message_buffer) != 0){
 		return;
 	}
-	FILE *in_file = fopen(file_name->c_str(), "rb");
+	FILE *in_file = fopen(file_name.c_str(), "rb");
 	if(in_file == NULL){					// check if file exist
 		message_buffer[0] = 1;
 		message_buffer[3] = -1;

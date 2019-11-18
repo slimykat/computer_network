@@ -216,7 +216,7 @@ void get(int *fd, string *file_name){
 		}
 		// write to file
 		remove(filenameStr.c_str());				// prevent overlapping
-		FILE *out_file = fopen(filenameStr.c_str(), "wb");
+		FILE *out_file = fopen(filenameStr->c_str(), "wb");
 		recv_file(fd, out_file);
 		fclose(out_file);
 	}
