@@ -193,7 +193,7 @@ void get(int  *fd, unsigned char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-void send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buffer[MAXDATASIZE], int bytes){
+int send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buffer[MAXDATASIZE], int bytes){
 	message_buffer[0] = 4;
 	unsigned short len = MAXDATASIZE - 3;
 	message_buffer[1] = (len & 511);
@@ -202,7 +202,7 @@ void send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buff
 	while(bytes > MAXDATASIZE){
 		memcpy(message_buffer + 3, frame_buffer + bytes_read, MAXDATASIZE - 3);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
-			return;
+			return -1;
 		}
 		bytes_read += (MAXDATASIZE-3);
 		bytes -= (MAXDATASIZE - 3);
@@ -213,12 +213,12 @@ void send_frame(int*fd, unsigned char * frame_buffer, unsigned char message_buff
 		message_buffer[2] = (len >> 8);
 		memcpy(message_buffer + 3, frame_buffer+bytes_read, len);
 		if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
-			return;
+			return -1;
 		}	
 	}
 	message_buffer[0] = 3;
 	send_message(fd, message_buffer, MAXDATASIZE);
-	return;
+	return 0;
 }
 
 void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){

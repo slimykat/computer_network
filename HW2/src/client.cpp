@@ -226,12 +226,12 @@ void get(int *fd, string *file_name){
 	return;
 }
 
-void recv_frame(int *fd, unsigned char *frame_buffer){
+int recv_frame(int *fd, unsigned char *frame_buffer){
 	
 	int bytes_read = 0;
 	unsigned short len, temp;
 	if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
-		return;
+		return -1;
 	}
 	while(message_buffer[0] == 4){
 		len = message_buffer[1];
@@ -240,12 +240,12 @@ void recv_frame(int *fd, unsigned char *frame_buffer){
 
 		memcpy(message_buffer + 3, frame_buffer + bytes_read, len);
 		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1){
-			return;
+			return -1;
 		}
 		bytes_read += len;
 	}
 
-	return;
+	return 0;
 }
 
 void play(int *fd, string *file_name){
