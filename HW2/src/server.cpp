@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include "opencv2/opencv.hpp"
-#define THREADCOUNT 1
+#define THREADCOUNT 2
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
@@ -22,7 +22,7 @@
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
-#define BACKLOG 1 		// 有多少個特定的連線佇列（pending connections queue）
+#define BACKLOG 2 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
 //#define DEBUG2
 using namespace std;
@@ -225,6 +225,12 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	if(recv_words(fd, &temp, message_buffer) != 0){
 		return;
 	}
+	if(!FILE * f = fopen(temp.c_str(), "rb")){
+		message_buffer[0] = 0;
+		send_message(fd, message_buffer, MAXDATASIZE);
+		return;
+	}
+	fclose(f);
 	if(temp.substr(1 + temp.find_first_of('.')).compare("mpg") != 0){
 		// not .mpg
 		message_buffer[0] = 2;
@@ -232,11 +238,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		return;
 	}
 	VideoCapture cap(temp.c_str());
-	if(!cap.isOpened()){					// check if file exist
-		message_buffer[0] = 0;
-		send_message(fd, message_buffer, MAXDATASIZE);
-		return;
-	}
+
 	message_buffer[0] = 1;
 
 	send_message(fd, message_buffer, MAXDATASIZE);	// tell client that file exist
@@ -470,6 +472,7 @@ int main(int argc , char **argv){
 			for(int i = 0 ; i < THREADCOUNT ; ++i){
 				if(thread_state[i] == 2){	// if pending
 					pthread_join(pid[i],NULL);
+					--num_of_threads;
 				}
 			}
 		}
