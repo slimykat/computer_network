@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include "opencv2/opencv.hpp"
+#define THREADCOUNT 1
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
@@ -26,7 +27,7 @@
 //#define DEBUG2
 using namespace std;
 using namespace cv;
-
+int = thread_state[THREADCOUNT] = {0};
 int recv_message(int *fd, unsigned char *message, int len){
 	int total = 0;
 	int bytesleft = len;
@@ -304,12 +305,19 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	return;
 }
 
-void command_handle(int *fd){
-	unsigned char message_buffer[MAXDATASIZE];
+struct arguments{
+	int file;
+	int pthread_i;
+}
 
+void *command_handle(void *A){
+	struct arguments arg = *(struct arguments *)A;
+	int i = arg.pthread_i;
+	int fd = arg.file;
+	unsigned char message_buffer[MAXDATASIZE];
 	while(1){
 		cout << "waiting for command\n";
-		if(recv_message(fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
+		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
 		if(message_buffer[0] != 1){
 			break;
 		}
@@ -317,36 +325,37 @@ void command_handle(int *fd){
 		if(message_buffer[3] == 1){		// ls
 			cout << "ls\n";
 			answer_YesNo(fd, message_buffer, true);
-			ls(fd, message_buffer);
+			ls(&fd, message_buffer);
 		}else if(message_buffer[3] == 2){	// put
 			cout << "put\n";
 			answer_YesNo(fd, message_buffer, true);
-			put(fd, message_buffer);
+			put(&fd, message_buffer);
 		}else if(message_buffer[3] == 3){	// get
 			cout << "get\n";
 			answer_YesNo(fd, message_buffer, true);
-			get(fd, message_buffer);
+			get(&fd, message_buffer);
 		}else if(message_buffer[3] == 4){	// play
 			cout << "play\n";
 			answer_YesNo(fd, message_buffer, true);
-			play(fd, message_buffer);
+			play(&fd, message_buffer);
 		}else if(message_buffer[3] == 5){	// close
-			close(*fd);
+			close(fd);
 			return;
 		}else{								// unknown command
 			message_buffer[0] = 0;
-			send_message(fd, message_buffer, MAXDATASIZE);
+			send_message(&fd, message_buffer, MAXDATASIZE);
 		}
 		#ifndef DEBUG2
 		int count;
-		ioctl(*fd, FIONREAD, &count);
+		ioctl(fd, FIONREAD, &count);
 		cout << "data in socket remains : " << count << "bytes\n";
 	 	#endif
 	}
 	// error occur
 	message_buffer[0] = 0;
-	send_message(fd, message_buffer, MAXDATASIZE);
-	close(*fd);
+	send_message(&fd, message_buffer, MAXDATASIZE);
+	close(fd);
+	thread_state[i] = 2;	//pending
 }
 
 int main(int argc , char **argv){
@@ -426,19 +435,39 @@ int main(int argc , char **argv){
 	}
 
 	//////////////////////////////
+	pthread_t pid[THREADCOUNT];
+	// 0 : ready
+	int num_of_threads = 0;
 
 	while(1) { // 主要的 accept() 迴圈
-		printf("server: waiting for connections...\n");
-		sin_size = sizeof their_addr;
-		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-		if (new_fd == -1) {
-			perror("accept");
-			continue;
+
+		if(num_of_threads < THREADCOUNT){
+			sin_size = sizeof their_addr;
+			new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+			if (new_fd == -1) {
+				perror("accept");
+				continue;
+			}
+			int i = 0;
+			for(; i < THREADCOUNT ; ++i){
+				if(thread_state[i] == 0){
+					thread_state[i] = 1;
+					break;
+				}
+			}
+			struct arguments A;
+			A.file = new_fd;
+			A.pthread_i = i;
+			pthread_create(&pid[i], NULL, command_handle,(void*)&A);
+			++num_of_threads;
 		}
-		// pthread handler and command handler
-		cout << "new client incoming\n";
-		command_handle(&new_fd);
-		cout << "end connection\n";
+		else{
+			for(int i = 0 ; i < THREADCOUNT ; ++i){
+				if(thread_state == 2){	// if pending
+					pthread_join(pid[i],NULL);
+				}
+			}
+		}
 	}
 	return 0;	
 }
