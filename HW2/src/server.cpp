@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include "opencv2/opencv.hpp"
-#define THREADCOUNT 1
+#define THREADCOUNT 3
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
@@ -22,7 +22,7 @@
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
-#define BACKLOG 1 		// 有多少個特定的連線佇列（pending connections queue）
+#define BACKLOG 3 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
 //#define DEBUG2
 using namespace std;
