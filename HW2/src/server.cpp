@@ -308,7 +308,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 struct arguments{
 	int file;
 	int pthread_i;
-}
+};
 
 void *command_handle(void *A){
 	struct arguments arg = *(struct arguments *)A;
@@ -317,7 +317,7 @@ void *command_handle(void *A){
 	unsigned char message_buffer[MAXDATASIZE];
 	while(1){
 		cout << "waiting for command\n";
-		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
+		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {break;}	// error
 		if(message_buffer[0] != 1){
 			// fatal error
 			message_buffer[0] = 0;
