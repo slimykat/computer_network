@@ -273,9 +273,11 @@ void play(int *fd, string *file_name){
 		perror("request recv");
 		return;
 	}
-	if(!(message_buffer[0] == 1 && message_buffer[3] == 1 && message_buffer[4] == 1)){
+	if(message_buffer[0] == 0){
 		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
 		return;
+	}else if(message_buffer[0] == 2){
+		cerr << "The ‘" << *file_name << "’ is not a mpg file.\n";
 	}
 	cout << "confirmed name\n";
 	Mat imgClient;
@@ -435,6 +437,7 @@ int main(int argc , char **argv){
 	if(connect(sockfd, p->ai_addr, p->ai_addrlen) == -1){
 		close(sockfd);
 		perror("client: connect");
+		cerr << "connection failed\n";
 		return(2);
 	}
 

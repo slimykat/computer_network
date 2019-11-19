@@ -22,7 +22,7 @@
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
-#define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
+#define BACKLOG 1 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
 //#define DEBUG2
 using namespace std;
@@ -225,6 +225,12 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	if(recv_words(fd, &temp, message_buffer) != 0){
 		return;
 	}
+	if(temp.substr(1 + temp.find_first_of('.')).compare("mpg") != 0){
+		// not .mpg
+		message_buffer[0] = 2;
+		send_message(fd, message_buffer, MAXDATASIZE);
+		return;
+	}
 	VideoCapture cap(temp.c_str());
 	if(!cap.isOpened()){					// check if file exist
 		message_buffer[0] = 0;
@@ -232,8 +238,7 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 		return;
 	}
 	message_buffer[0] = 1;
-	message_buffer[3] = 1;
-	message_buffer[4] = 1;
+
 	send_message(fd, message_buffer, MAXDATASIZE);	// tell client that file exist
 	cout << "confirmed name\n";
 
