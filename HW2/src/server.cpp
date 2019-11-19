@@ -225,7 +225,8 @@ void play(int *fd, unsigned char message_buffer[MAXDATASIZE]){
 	if(recv_words(fd, &temp, message_buffer) != 0){
 		return;
 	}
-	if(!FILE * f = fopen(temp.c_str(), "rb")){
+	FILE * f = fopen(temp.c_str(), "rb");
+	if(f == NULL){
 		message_buffer[0] = 0;
 		send_message(fd, message_buffer, MAXDATASIZE);
 		return;
