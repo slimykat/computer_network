@@ -23,7 +23,7 @@
 
 #define Client "./client_files"
 #define DEBUG1
-//#define DEBUG2
+#define DEBUG2
 using namespace std;
 using namespace cv;
 

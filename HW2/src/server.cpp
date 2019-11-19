@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include "opencv2/opencv.hpp"
-#define THREADCOUNT 3
+#define THREADCOUNT 20
 #define MAXDATASIZE 1024 	// bytes
 // send protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:end connection, 1:preparing, 2:sending, 3:end send, 4:ask for frame>
@@ -22,9 +22,9 @@
 // recv protocal: 63~3:DATA 2~1:DATALENGTH 0:INSTRUCTION
 	// INSTRUCTION:: <0:probe, 0:error, 1:preparing, 2:sending, 3:end send, 4:send a frame>
 
-#define BACKLOG 3 		// 有多少個特定的連線佇列（pending connections queue）
+#define BACKLOG 20 		// 有多少個特定的連線佇列（pending connections queue）
 #define Server "./server_files"
-//#define DEBUG2
+#define DEBUG2
 using namespace std;
 using namespace cv;
 int thread_state[THREADCOUNT] = {0};
@@ -327,7 +327,10 @@ void *command_handle(void *A){
 	send_message(&fd, message_buffer, MAXDATASIZE);
 	while(1){
 		cout << "waiting for command\n";
-		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {break;}	// error
+		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {
+			cout << "forced closed\n";
+			break;
+		}	// error
 		if(message_buffer[0] != 1){
 			// fatal error
 			message_buffer[0] = 0;
@@ -352,6 +355,7 @@ void *command_handle(void *A){
 			answer_YesNo(&fd, message_buffer, true);
 			play(&fd, message_buffer);
 		}else if(message_buffer[3] == 5){	// close
+			cout << "closed\n";
 			break;
 		}else{								// unknown command
 			message_buffer[0] = 0;
