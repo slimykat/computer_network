@@ -220,7 +220,7 @@ int get(int *fd, string *file_name){
 		// write to file
 		remove(file_name->c_str());				// prevent overlapping
 		FILE *out_file = fopen(file_name->c_str(), "wb");
-		if(recv_file(fd, out_file) != 0) { return -1};
+		if(recv_file(fd, out_file) != 0) { return -1;}
 		fclose(out_file);
 	}
 	return 0;
