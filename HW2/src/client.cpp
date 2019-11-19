@@ -442,6 +442,13 @@ int main(int argc , char **argv){
 	}
 
 	freeaddrinfo(servinfo);
+
+	cout << "waiting...\n";
+	recv_message(&sockfd, message_buffer, MAXDATASIZE);
+	if(message_buffer[0] == 0){
+		cout << "connection failed\n";
+		return;
+	}
 	cout << "connection success\n";
 
 	/// Instruction ///
