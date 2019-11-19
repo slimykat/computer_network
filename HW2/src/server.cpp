@@ -323,6 +323,8 @@ void *command_handle(void *A){
 	int i = arg.pthread_i;
 	int fd = arg.file;
 	unsigned char message_buffer[MAXDATASIZE];
+	message_buffer[0] = 1;
+	send_message(&fd, message_buffer, MAXDATASIZE);
 	while(1){
 		cout << "waiting for command\n";
 		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {break;}	// error
