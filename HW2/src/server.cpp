@@ -328,7 +328,7 @@ void *command_handle(void *A){
 	while(1){
 		cout << "waiting for command\n";
 		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {
-			cout << "forced closed\n";
+			cout << i << "forced closed\n";
 			break;
 		}	// error
 		if(message_buffer[0] != 1){
@@ -337,7 +337,7 @@ void *command_handle(void *A){
 			send_message(&fd, message_buffer, MAXDATASIZE);
 			break;
 		}
-		cout << "command : ";
+		cout << "Client " << i << " command : ";
 		if(message_buffer[3] == 1){		// ls
 			cout << "ls\n";
 			answer_YesNo(&fd, message_buffer, true);
