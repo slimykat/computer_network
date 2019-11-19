@@ -447,7 +447,7 @@ int main(int argc , char **argv){
 	recv_message(&sockfd, message_buffer, MAXDATASIZE);
 	if(message_buffer[0] == 0){
 		cout << "connection failed\n";
-		return;
+		return 0;
 	}
 	cout << "connection success\n";
 
