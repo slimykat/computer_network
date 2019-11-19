@@ -136,24 +136,24 @@ int send_file(int *fd, FILE *file){
 	return 0;
 }
 
-void ls(int *fd){
+int ls(int *fd){
 	memset(message_buffer, 0, sizeof message_buffer);
 
 	message_buffer[0] = 1;					// send ls command
 	message_buffer[3] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
-		return;
+		return -1;
 	}
 
 	// receive answer from server
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("ls recv message");
-		return;
+		return -1;
 	}
 	if(message_buffer[0] == 0){
 		cerr << "ls rejected";
-		return;
+		return -1;
 	}
 	cout << "===================" << endl;
 	if(message_buffer[0] == 1){	// command accepted
@@ -162,68 +162,68 @@ void ls(int *fd){
 		fflush(stdout);
 	}
 	cout << "===================" << endl;
-	return;
+	return 0;
 }
 
-void put(int *fd, string * file_name){
+int put(int *fd, string * file_name){
 	FILE *in_file = fopen(file_name->c_str(), "rb");
 	if(in_file == NULL){					// check if file exist
 		cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
-		return;
+		return 0;
 	}
 	// send put command
 	message_buffer[0] = 1;
 	message_buffer[3] = 2;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
-		return;
+		return -1;
 	}
 	// receive answer from server
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-		return;
+		return -1;
 	}
 	if(message_buffer[0] == 1){	// command accepted
 		stringstream ss;
 		ss << (*file_name);
-		if(send_words(fd, &ss) != 0) {return;}
-		send_file(fd, in_file);
+		if(send_words(fd, &ss) != 0) {return -1;}
+		if(send_file(fd, in_file) != 0) {return -1;};
 	}
 	
-	return;
+	return 0;
 }
 
-void get(int *fd, string *file_name){
+int get(int *fd, string *file_name){
 	// send get command
 	message_buffer[0] = 1;
 	message_buffer[3] = 3;
 	if(send_message(fd, message_buffer, MAXDATASIZE) == -1){
 		perror("send_message");
-		return;
+		return -1;
 	}
 	// receive answer from server
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-		return;
+		return -1;
 	}
 	if(message_buffer[0] == 1) {
 		// send file name
 		stringstream ss;
 		ss << (*file_name);
-		if(send_words(fd, &ss) != 0) {return;}
+		if(send_words(fd, &ss) != 0) {return -1;}
 		// check if file exist
 		if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
-			return;
+			return -1;
 		}
 		if(message_buffer[0] == 0){
 			cout << "The ‘" << *file_name << "’ doesn’t exist.\n";
-			return;
+			return 0;
 		}
 		// write to file
 		remove(file_name->c_str());				// prevent overlapping
 		FILE *out_file = fopen(file_name->c_str(), "wb");
-		recv_file(fd, out_file);
+		if(recv_file(fd, out_file) != 0) { return -1};
 		fclose(out_file);
 	}
-	return;
+	return 0;
 }
 
 int recv_frame(int *fd, uchar *frame_buffer){
@@ -248,20 +248,22 @@ int recv_frame(int *fd, uchar *frame_buffer){
 	return 0;
 }
 
-void play(int *fd, string *file_name){
+int play(int *fd, string *file_name){
 	
 	// send play request
 	message_buffer[0] = 1;
 	message_buffer[3] = 4;
-	send_message(fd, message_buffer, MAXDATASIZE);
+	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
+		return -1;
+	}
 
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("request recv");
-		return;
+		return -1;
 	}
 	if(message_buffer[0] == 0){
 		cerr << "request rejected\n";
-		return;
+		return -1;
 	}
 
 	// send file name, check if file exist
@@ -271,13 +273,14 @@ void play(int *fd, string *file_name){
 
 	if(recv_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("request recv");
-		return;
+		return -1;
 	}
 	if(message_buffer[0] == 0){
 		cerr << "The'" << *file_name << "’ doesn’t exist.\n";
-		return;
+		return 0;
 	}else if(message_buffer[0] == 2){
 		cerr << "The ‘" << *file_name << "’ is not a mpg file.\n";
+		return 0;
 	}
 	cout << "confirmed name\n";
 	Mat imgClient;
@@ -286,26 +289,26 @@ void play(int *fd, string *file_name){
 	string resol;
 	if(recv_words(fd, &resol) != 0){
 		perror("request recv");
-		return;
+		return -1;
 	}
 	int width = atoi(resol.c_str());
 	if(recv_words(fd, &resol) != 0){
 		perror("request recv");
-		return;
+		return -1;
 	}
 	int height = atoi(resol.c_str());
 	cout << "width = " << width << "\nheight = " << height << endl;
 
 	if(recv_words(fd, &resol) != 0){
 		perror("request recv");
-		return;
+		return -1;
 	}
 	unsigned int frame_count = atoi(resol.c_str());
 
 	message_buffer[0] = 1;
 	if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
 		perror("play send");
-		return;
+		return -1;
 	}
 	cout << "get resolutions, preparing video frame\n";
 
@@ -329,15 +332,19 @@ void play(int *fd, string *file_name){
 		if(c==27){
 			cout << "closing video\n";
 			message_buffer[0] = 3;
-			send_message(fd, message_buffer, MAXDATASIZE);
+			if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
+				return -1;
+			}
 			break;
 		}
 		message_buffer[0] = 4;
-		send_message(fd, message_buffer, MAXDATASIZE);
+		if(send_message(fd, message_buffer, MAXDATASIZE) != 0){
+			return -1;
+		}
 	}
 	////////////////////////////////////////////////////
 	destroyAllWindows();
-	return;
+	return 0;
 }
 
 int main(int argc , char **argv){
@@ -444,7 +451,10 @@ int main(int argc , char **argv){
 	freeaddrinfo(servinfo);
 
 	cout << "waiting...\n";
-	recv_message(&sockfd, message_buffer, MAXDATASIZE);
+	if(recv_message(&sockfd, message_buffer, MAXDATASIZE) != 0){
+		cout << "connection failed\n";
+		return 0;
+	}
 	if(message_buffer[0] == 0){
 		cout << "connection failed\n";
 		return 0;
@@ -476,25 +486,37 @@ int main(int argc , char **argv){
 				fprintf(stderr, "Command format error\n");
 				continue;
 			}
-			ls(&sockfd);
+			if(ls(&sockfd) != 0){
+				cout << "error\n";
+				return 0;
+			}
 		}else if(instruction.compare("put") == 0){				// put
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
 				continue;
 			}
-			put(&sockfd, &file);
+			if(put(&sockfd, &file) != 0){
+				cout << "error\n";
+				return 0;
+			}
 		}else if(instruction.compare("play") == 0){				// play
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
 				continue;
 			}
-			play(&sockfd, &file);
+			if(play(&sockfd, &file) != 0){
+				cout << "error\n";
+				return 0;
+			}
 		}else if(instruction.compare("get") == 0){				// get
 			if(file.length() == 0){
 				fprintf(stderr, "Command format error\n");
 				continue;
 			}
-			get(&sockfd, &file);
+			if(get(&sockfd, &file) != 0){
+				cout << "error\n";
+				return 0;
+			}
 		}else if(instruction.compare("close") == 0){			// close
 			run = false;
 			message_buffer[0] = 1;
@@ -509,10 +531,4 @@ int main(int argc , char **argv){
 	
 	return 0;
 }
-
-
-
-
-
-
 
