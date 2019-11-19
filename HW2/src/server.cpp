@@ -27,7 +27,7 @@
 //#define DEBUG2
 using namespace std;
 using namespace cv;
-int = thread_state[THREADCOUNT] = {0};
+int thread_state[THREADCOUNT] = {0};
 int recv_message(int *fd, unsigned char *message, int len){
 	int total = 0;
 	int bytesleft = len;
@@ -319,28 +319,31 @@ void *command_handle(void *A){
 		cout << "waiting for command\n";
 		if(recv_message(&fd, message_buffer, MAXDATASIZE) == -1) {return;}	// error
 		if(message_buffer[0] != 1){
+			// fatal error
+			message_buffer[0] = 0;
+			send_message(&fd, message_buffer, MAXDATASIZE);
 			break;
 		}
 		cout << "command : ";
 		if(message_buffer[3] == 1){		// ls
 			cout << "ls\n";
-			answer_YesNo(fd, message_buffer, true);
+			answer_YesNo(&fd, message_buffer, true);
 			ls(&fd, message_buffer);
 		}else if(message_buffer[3] == 2){	// put
 			cout << "put\n";
-			answer_YesNo(fd, message_buffer, true);
+			answer_YesNo(&fd, message_buffer, true);
 			put(&fd, message_buffer);
 		}else if(message_buffer[3] == 3){	// get
 			cout << "get\n";
-			answer_YesNo(fd, message_buffer, true);
+			answer_YesNo(&fd, message_buffer, true);
 			get(&fd, message_buffer);
 		}else if(message_buffer[3] == 4){	// play
 			cout << "play\n";
-			answer_YesNo(fd, message_buffer, true);
+			answer_YesNo(&fd, message_buffer, true);
 			play(&fd, message_buffer);
 		}else if(message_buffer[3] == 5){	// close
 			close(fd);
-			return;
+			break;
 		}else{								// unknown command
 			message_buffer[0] = 0;
 			send_message(&fd, message_buffer, MAXDATASIZE);
@@ -351,9 +354,6 @@ void *command_handle(void *A){
 		cout << "data in socket remains : " << count << "bytes\n";
 	 	#endif
 	}
-	// error occur
-	message_buffer[0] = 0;
-	send_message(&fd, message_buffer, MAXDATASIZE);
 	close(fd);
 	thread_state[i] = 2;	//pending
 }
@@ -463,7 +463,7 @@ int main(int argc , char **argv){
 		}
 		else{
 			for(int i = 0 ; i < THREADCOUNT ; ++i){
-				if(thread_state == 2){	// if pending
+				if(thread_state[i] == 2){	// if pending
 					pthread_join(pid[i],NULL);
 				}
 			}
